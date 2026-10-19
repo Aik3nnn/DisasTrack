@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { logAction } from "../Audit/auditLog.js";
 import { useAuditLogs } from "../Audit/useAuditLogs.js";
-import { changeOwnPassword, updateAccount } from "../accountService.js";
+import { changeOwnPassword, updateOwnProfile } from "../accountService.js";
 import { formatDate, formatDateTime, phoneText, resizePhoto } from "../adminHelpers.js";
 import "./Profile.css";
 
@@ -56,7 +56,7 @@ export default function Profile({ user, onUpdate }) {
       office: details.office.trim(),
     };
     try {
-      await updateAccount(user.uid, values);
+      await updateOwnProfile(user.uid, values);
       logAction({ category: "Account", action: "Profile updated", target: values.name, details: "Name and contact details saved" });
       onUpdate(values);
       setDetailsSaved(true);
@@ -113,7 +113,7 @@ export default function Profile({ user, onUpdate }) {
     setPhotoBusy(true);
     try {
       const photo = await resizePhoto(file);
-      await updateAccount(user.uid, { photo });
+      await updateOwnProfile(user.uid, { photo });
       onUpdate({ photo });
     } catch (err) {
       setPhotoError(err.message);
@@ -125,7 +125,7 @@ export default function Profile({ user, onUpdate }) {
     setPhotoError("");
     setPhotoBusy(true);
     try {
-      await updateAccount(user.uid, { photo: null }); // null deletes it from the database
+      await updateOwnProfile(user.uid, { photo: null }); // null deletes it from the database
       onUpdate({ photo: "" });
     } catch (err) {
       setPhotoError(err.message);

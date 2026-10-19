@@ -2,33 +2,140 @@
   "rules": {
     ".read": false,
     ".write": false,
-
     "users": {
-      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'Admin'",
-      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'Admin'",
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        "name": { ".write": "auth != null && auth.uid === $uid" },
-        "email": { ".write": "auth != null && auth.uid === $uid" },
-        "phone": { ".write": "auth != null && auth.uid === $uid" },
-        "office": { ".write": "auth != null && auth.uid === $uid" },
-        "photo": { ".write": "auth != null && auth.uid === $uid" },
-        "lastLogin": { ".write": "auth != null && auth.uid === $uid" }
+      ".read": "auth != null && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Admin')",
+      ".write": "auth != null && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Admin')",
+      "Admins": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          "name": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "email": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "phone": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "office": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "photo": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "lastLogin": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      },
+      "Residents": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          "name": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "email": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "phone": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "office": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "photo": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "lastLogin": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      },
+      "DisasterManagementOfficers": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          "name": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "email": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "phone": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "office": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "photo": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "lastLogin": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      },
+      "RescueTeamMembers": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          "name": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "email": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "phone": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "office": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "photo": {
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "lastLogin": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      },
+      "$oldUid": {
+        ".read": "auth != null && auth.uid === $oldUid",
+        "name": {
+          ".write": "auth != null && auth.uid === $oldUid"
+        },
+        "email": {
+          ".write": "auth != null && auth.uid === $oldUid"
+        },
+        "phone": {
+          ".write": "auth != null && auth.uid === $oldUid"
+        },
+        "office": {
+          ".write": "auth != null && auth.uid === $oldUid"
+        },
+        "photo": {
+          ".write": "auth != null && auth.uid === $oldUid"
+        },
+        "lastLogin": {
+          ".write": "auth != null && auth.uid === $oldUid"
+        }
       }
     },
-
+    "userRoles": {
+      ".read": "auth != null && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Admin')",
+      ".write": "auth != null && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Admin')",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid"
+      }
+    },
     "auditLogs": {
-      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Disaster Management Officer')",
+      ".read": "auth != null && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('userRoles').child(auth.uid).val() === 'Disaster Management Officer' || root.child('users').child(auth.uid).child('role').val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Disaster Management Officer')",
       "$logId": {
         ".write": "auth != null && !data.exists()"
       }
     },
-
     "incidents": {
       ".read": "auth != null",
       ".write": "auth != null"
     },
-
     "rescueTeams": {
       ".read": "auth != null",
       ".write": "auth != null"

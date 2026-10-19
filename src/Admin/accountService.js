@@ -1,6 +1,17 @@
 /* ------------------------------------------------------------------
    Everything that talks to Firebase about accounts lives here, so the
-   screens stay simple. Profiles are saved at /users/{uid}.
+   screens stay simple.
+
+   Profiles are saved in one folder per role:
+     /users/Admins/{uid}
+     /users/Residents/{uid}
+     /users/DisasterManagementOfficers/{uid}
+     /users/RescueTeamMembers/{uid}
+   plus a small lookup  /userRoles/{uid} = "Resident" (etc.), so the app can
+   find a person's folder from their uid alone (for example at sign-in).
+
+   OLD accounts saved directly at /users/{uid} still work ("legacy").
+   The Users screen has a button that moves them into the role folders.
 ------------------------------------------------------------------- */
 import { deleteApp, initializeApp } from "firebase/app";
 import {
@@ -15,9 +26,30 @@ import {
   signOut,
   updatePassword,
 } from "firebase/auth";
-import { get, onValue, ref, remove, set, update } from "firebase/database";
+import { get, onValue, ref, update } from "firebase/database";
 import { app, auth, db, usernameToEmail } from "../firebase.js";
 import { logAction } from "./Audit/auditLog.js";
+
+// Role (as stored in the profile) -> folder name under /users.
+export const ROLE_FOLDERS = {
+  Admin: "Admins",
+  Resident: "Residents",
+  "Disaster Management Officer": "DisasterManagementOfficers",
+  "Rescue Team": "RescueTeamMembers",
+};
+const FOLDER_NAMES = Object.values(ROLE_FOLDERS);
+
+// Where an account is saved. account = { id, role, legacy }.
+function accountPath(account) {
+  if (account.legacy) return `users/${account.id}`; // old flat structure
+  return `users/${ROLE_FOLDERS[account.role]}/${account.id}`;
+}
+
+// Removes the helper fields (id, legacy, password) that must never be saved in the profile.
+function cleanProfile(values) {
+  const { id, legacy, password, ...clean } = values; // eslint-disable-line no-unused-vars
+  return clean;
+}
 
 // Turns Firebase's error codes into messages a person can read.
 function friendlyMessage(err) {
@@ -36,11 +68,19 @@ function friendlyMessage(err) {
 
 // Loads the signed-in person's profile and checks that they may use the admin console.
 export async function loadAdminProfile(uid) {
-  const snapshot = await get(ref(db, `users/${uid}`));
-  const profile = snapshot.val();
+  // 1. Ask the lookup which role this person has.
+  const role = (await get(ref(db, `userRoles/${uid}`))).val();
+
+  // 2. Load the profile: the Admins folder first, then the old flat place.
+  let profile = null;
+  if (!role || role === "Admin") {
+    profile = (await get(ref(db, `users/Admins/${uid}`))).val();
+    if (!profile) profile = (await get(ref(db, `users/${uid}`))).val();
+  }
 
   let problem = "";
-  if (!profile) problem = "No profile was found for this account. Ask an administrator to set it up.";
+  if (role && role !== "Admin") problem = "This account does not have access to the admin console.";
+  else if (!profile) problem = "No profile was found for this account. Ask an administrator to set it up.";
   else if (profile.role !== "Admin") problem = "This account does not have access to the admin console.";
   else if (profile.status === "Suspended") problem = "This account has been suspended.";
 
@@ -57,7 +97,7 @@ export async function signInAdmin(username, password, remember) {
     await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
     const result = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
     const admin = await loadAdminProfile(result.user.uid);
-    await update(ref(db, `users/${admin.uid}`), { lastLogin: new Date().toISOString() });
+    await updateOwnProfile(admin.uid, { lastLogin: new Date().toISOString() });
     // Record the sign-in (the actor is passed here because App.jsx has not stored it yet).
     logAction({
       actor: admin.name,
@@ -74,7 +114,7 @@ export async function signInAdmin(username, password, remember) {
   }
 }
 
-// ---------- accounts (users, dispatchers, ...) ----------
+// ---------- accounts ----------
 
 // Calls callback(list, error) every time /users changes. Returns a function that stops listening.
 export function watchAccounts(callback) {
@@ -82,23 +122,38 @@ export function watchAccounts(callback) {
     ref(db, "users"),
     (snapshot) => {
       const data = snapshot.val() || {};
-      callback(Object.entries(data).map(([id, value]) => ({ id, ...value })), null);
+      const list = [];
+      Object.entries(data).forEach(([key, value]) => {
+        if (FOLDER_NAMES.includes(key)) {
+          // A role folder: every child is one account.
+          Object.entries(value || {}).forEach(([uid, profile]) => list.push({ id: uid, ...profile }));
+        } else {
+          // An old account saved directly under /users/{uid}.
+          list.push({ id: key, legacy: true, ...value });
+        }
+      });
+      callback(list, null);
     },
     (err) => callback([], new Error(friendlyMessage(err)))
   );
 }
 
-// Creates the sign-in account AND the profile.
+// Creates the sign-in account AND the profile (in the folder of its role).
 // A second, temporary Firebase app is used so the admin does not get signed out
 // (creating a user normally signs you in as that user).
 export async function createAccount(profile, password) {
+  const folder = ROLE_FOLDERS[profile.role];
+  if (!folder) throw new Error("Choose a valid role for this account.");
+
   const helperApp = initializeApp(app.options, `helper-${Date.now()}`);
   try {
     const helperAuth = getAuth(helperApp);
     const created = await createUserWithEmailAndPassword(helperAuth, usernameToEmail(profile.username), password);
-    await set(ref(db, `users/${created.user.uid}`), {
-      ...profile,
-      createdAt: new Date().toISOString(),
+    const uid = created.user.uid;
+    // One update writes both places together: the profile and the role lookup.
+    await update(ref(db), {
+      [`users/${folder}/${uid}`]: { ...cleanProfile(profile), createdAt: new Date().toISOString() },
+      [`userRoles/${uid}`]: profile.role,
     });
     await signOut(helperAuth);
   } catch (err) {
@@ -108,9 +163,39 @@ export async function createAccount(profile, password) {
   }
 }
 
-export async function updateAccount(uid, values) {
+// Edits an account. account = the account being edited (as listed on the Users screen),
+// values = the fields to change. If the role changes (or the account is still in the
+// old flat place), the profile is MOVED into the right role folder.
+export async function updateAccount(account, values) {
   try {
-    await update(ref(db, `users/${uid}`), values);
+    const clean = cleanProfile(values);
+    const newRole = clean.role || account.role;
+
+    if (!account.legacy && newRole === account.role) {
+      // Same place: a simple edit.
+      await update(ref(db, accountPath(account)), clean);
+      return;
+    }
+
+    // Move: copy the whole profile to the new folder and remove the old one.
+    const folder = ROLE_FOLDERS[newRole];
+    if (!folder) throw new Error("Choose a valid role for this account.");
+    await update(ref(db), {
+      [accountPath(account)]: null, // null deletes
+      [`users/${folder}/${account.id}`]: { ...cleanProfile(account), ...clean },
+      [`userRoles/${account.id}`]: newRole,
+    });
+  } catch (err) {
+    throw new Error(friendlyMessage(err));
+  }
+}
+
+// The signed-in person edits their OWN profile (name, phone, photo, ...).
+// Finds the right place: the Admins folder, or the old flat place if not moved yet.
+export async function updateOwnProfile(uid, values) {
+  try {
+    const inFolder = (await get(ref(db, `users/Admins/${uid}`))).exists();
+    await update(ref(db, inFolder ? `users/Admins/${uid}` : `users/${uid}`), values);
   } catch (err) {
     throw new Error(friendlyMessage(err));
   }
@@ -119,12 +204,39 @@ export async function updateAccount(uid, values) {
 // NOTE: this removes the profile only. The sign-in account stays in Firebase
 // Authentication, but it can no longer use the app because it has no profile.
 // To free the username again, delete it in the Firebase console (Authentication > Users).
-export async function deleteAccount(uid) {
+export async function deleteAccount(account) {
   try {
-    await remove(ref(db, `users/${uid}`));
+    await update(ref(db), {
+      [accountPath(account)]: null,
+      [`userRoles/${account.id}`]: null,
+    });
   } catch (err) {
     throw new Error(friendlyMessage(err));
   }
+}
+
+// How many old (flat) accounts can be moved into role folders.
+// Old Dispatcher accounts are left alone (that role no longer exists).
+export function oldAccountsToMove(accounts) {
+  return accounts.filter((a) => a.legacy && ROLE_FOLDERS[a.role]);
+}
+
+// One-time clean-up: moves old accounts into their role folders. Returns how many were moved.
+export async function moveOldAccounts(accounts) {
+  const changes = {};
+  const toMove = oldAccountsToMove(accounts);
+  toMove.forEach((account) => {
+    changes[`users/${account.id}`] = null;
+    changes[`users/${ROLE_FOLDERS[account.role]}/${account.id}`] = cleanProfile(account);
+    changes[`userRoles/${account.id}`] = account.role;
+  });
+  if (toMove.length === 0) return 0;
+  try {
+    await update(ref(db), changes);
+  } catch (err) {
+    throw new Error(friendlyMessage(err));
+  }
+  return toMove.length;
 }
 
 // Changes the signed-in person's own password.

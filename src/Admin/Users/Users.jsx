@@ -3,7 +3,7 @@ import Icon from "../Icon.jsx";
 import UserModal from "./UserModal.jsx";
 import { ROLES, roleLabel } from "./usersData.js";
 import { useAccounts } from "../useAccounts.js";
-import { createAccount, deleteAccount, updateAccount } from "../accountService.js";
+import { createAccount, deleteAccount, moveOldAccounts, oldAccountsToMove, updateAccount } from "../accountService.js";
 import { downloadCSV, formatDate, phoneText, slug } from "../adminHelpers.js";
 import { logAction } from "../Audit/auditLog.js";
 import "./Users.css";
@@ -44,9 +44,9 @@ export default function Users() {
   // Errors thrown here are shown inside the dialog.
   async function save(values) {
     // Do not save the password or the id inside the profile.
-    const { password, id, ...profile } = values; // eslint-disable-line no-unused-vars
+    const { password, id, legacy, ...profile } = values; // eslint-disable-line no-unused-vars
     if (modal.user) {
-      await updateAccount(modal.user.id, profile);
+      await updateAccount(modal.user, profile);
       logAction({ category: "Account", action: "User updated", target: profile.name, details: `${profile.role} account edited` });
     } else {
       await createAccount(profile, password);
@@ -59,7 +59,7 @@ export default function Users() {
     setActionError("");
     try {
       const newStatus = u.status === "Active" ? "Suspended" : "Active";
-      await updateAccount(u.id, { status: newStatus });
+      await updateAccount(u, { status: newStatus });
       logAction({
         category: "Account",
         action: newStatus === "Suspended" ? "User suspended" : "User reactivated",
@@ -74,12 +74,25 @@ export default function Users() {
   async function confirmRemove() {
     setActionError("");
     try {
-      await deleteAccount(removing.id);
+      await deleteAccount(removing);
       logAction({ category: "Account", action: "User deleted", target: removing.name, details: `${removing.role} account removed` });
     } catch (err) {
       setActionError(err.message);
     }
     setRemoving(null);
+  }
+
+  // Old accounts (saved before the role folders existed) can be moved with one click.
+  const oldCount = oldAccountsToMove(accounts).length;
+
+  async function moveOld() {
+    setActionError("");
+    try {
+      const moved = await moveOldAccounts(accounts);
+      logAction({ category: "System", action: "Accounts organized", target: `${moved} accounts`, details: "Moved into role folders" });
+    } catch (err) {
+      setActionError(err.message);
+    }
   }
 
   function exportCSV() {
@@ -144,6 +157,15 @@ export default function Users() {
           </button>
         </div>
       </div>
+
+      {oldCount > 0 && (
+        <p className="rt-hint">
+          {oldCount} account{oldCount > 1 ? "s are" : " is"} still in the old database structure.{" "}
+          <button type="button" className="admin-btn" onClick={moveOld}>
+            Move into role folders
+          </button>
+        </p>
+      )}
 
       {(error || actionError) && <p className="rt-error">{(error || { message: actionError }).message}</p>}
 
