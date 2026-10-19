@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------
-   Small helpers shared by the Users, Dispatchers, Audit, Reports & Stats
+   Small helpers shared by the Users, Audit, Reports & Stats
    and Profile screens. Kept simple on purpose.
 ------------------------------------------------------------------- */
 

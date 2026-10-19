@@ -14,7 +14,6 @@ import IncidentReports from "./Admin/IncidentReports/IncidentReports.jsx";
 import IncidentDetail from "./Admin/IncidentReports/IncidentDetail.jsx";
 import RescueTeams from "./Admin/RescueTeams/RescueTeams.jsx";
 import Users from "./Admin/Users/Users.jsx";
-import Dispatchers from "./Admin/Dispatchers/Dispatchers.jsx";
 import ReportsStats from "./Admin/ReportsStats/ReportsStats.jsx";
 import Audit from "./Admin/Audit/Audit.jsx";
 import { setAuditActor } from "./Admin/Audit/auditLog.js";
@@ -239,7 +238,6 @@ export default function App() {
         <Route path="live-map" element={<ComingSoon title="Live Map" />} />
         <Route path="rescue-teams" element={<RescueTeams />} />
         <Route path="users" element={<Users />} />
-        <Route path="dispatchers" element={<Dispatchers />} />
         <Route path="reports" element={<ReportsStats />} />
         <Route path="audit" element={<Audit />} />
         <Route path="profile" element={<Profile user={user} onUpdate={handleUpdateUser} />} />

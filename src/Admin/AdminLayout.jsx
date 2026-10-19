@@ -11,7 +11,6 @@ const NAV = [
   { to: "/admin/live-map", label: "Live Map", icon: "map", sub: "Real-time view of incidents and rescue teams" },
   { to: "/admin/rescue-teams", label: "Rescue Teams", icon: "rescue", sub: "Manage teams and their availability" },
   { to: "/admin/users", label: "Users", icon: "users", sub: "Manage resident and responder accounts" },
-  { to: "/admin/dispatchers", label: "Dispatchers", icon: "dispatch", sub: "Manage dispatcher accounts and assignments" },
   { to: "/admin/reports", label: "Reports & Stats", icon: "stats", sub: "Overall statistics and downloadable reports" },
   { to: "/admin/audit", label: "Audit", icon: "audit", sub: "Record of important actions and status changes" },
   { to: "/admin/profile", label: "Profile", icon: "profile", hidden: true, sub: "Your account details and password" },

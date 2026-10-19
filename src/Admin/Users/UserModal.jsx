@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "../Icon.jsx";
 import { phoneText } from "../adminHelpers.js";
-import { ROLES, STATUSES } from "./usersData.js";
+import { TEAMS } from "../RescueTeams/rescueTeamsData.js"; // team names come from the Rescue Teams screen
+import { ROLES, STATUSES, roleLabel } from "./usersData.js";
 
 const EMPTY = {
   name: "",
@@ -10,6 +11,7 @@ const EMPTY = {
   phone: "",
   role: ROLES[0],
   address: "",
+  team: "",
   status: "Active",
   password: "",
 };
@@ -61,6 +63,8 @@ export default function UserModal({ user, existing, onSave, onClose }) {
 
     if (!form.phone.trim()) next.phone = "Enter a contact number.";
 
+    if (form.role === "Rescue Team" && !form.team) next.team = "Choose the team this member belongs to.";
+
     if (!isEdit && form.password.length < 8) next.password = "Use at least 8 characters.";
 
     setErrors(next);
@@ -75,6 +79,8 @@ export default function UserModal({ user, existing, onSave, onClose }) {
       email,
       phone: form.phone.trim(),
       address: form.address.trim(),
+      // Only keep the team for the Rescue Team Member role.
+      team: form.role === "Rescue Team" ? form.team : "",
     });
     } catch (err) {
       setErrors({ form: err.message });
@@ -121,7 +127,7 @@ export default function UserModal({ user, existing, onSave, onClose }) {
             <label htmlFor="us-role">Role</label>
             <select id="us-role" value={form.role} onChange={set("role")}>
               {ROLES.map((r) => (
-                <option key={r}>{r}</option>
+                <option key={r} value={r}>{roleLabel(r)}</option>
               ))}
             </select>
           </div>
@@ -140,6 +146,19 @@ export default function UserModal({ user, existing, onSave, onClose }) {
             <div className="rt-field rt-field--full">
               <label htmlFor="us-address">Address / barangay</label>
               <input id="us-address" value={form.address} onChange={set("address")} />
+            </div>
+          )}
+
+          {form.role === "Rescue Team" && (
+            <div className="rt-field rt-field--full">
+              <label htmlFor="us-team">Rescue team</label>
+              <select id="us-team" value={form.team} onChange={set("team")}>
+                <option value="">Choose a team</option>
+                {TEAMS.map((t) => (
+                  <option key={t.id} value={t.name}>{t.name}</option>
+                ))}
+              </select>
+              {errors.team && <p className="rt-error">{errors.team}</p>}
             </div>
           )}
 

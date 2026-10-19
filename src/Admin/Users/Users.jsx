@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import Icon from "../Icon.jsx";
 import UserModal from "./UserModal.jsx";
-import { ROLES } from "./usersData.js";
+import { ROLES, roleLabel } from "./usersData.js";
 import { useAccounts } from "../useAccounts.js";
 import { createAccount, deleteAccount, updateAccount } from "../accountService.js";
 import { downloadCSV, formatDate, phoneText, slug } from "../adminHelpers.js";
@@ -10,7 +10,7 @@ import "./Users.css";
 
 export default function Users() {
   const { accounts, loading, error } = useAccounts();
-  // This screen shows everyone except admins and dispatchers (dispatchers have their own screen).
+  // This screen shows everyone except admins and old dispatcher accounts (hidden).
   const users = useMemo(
     () => accounts.filter((u) => u.role !== "Admin" && u.role !== "Dispatcher"),
     [accounts]
@@ -27,7 +27,7 @@ export default function Users() {
   const stats = [
     { label: "Total Users", value: users.length, icon: "users", tone: "slate", note: "All accounts" },
     { label: "Residents", value: countRole("Resident"), icon: "profile", tone: "jet", note: "Report emergencies" },
-    { label: "DM Officers", value: countRole("Disaster Management Officer"), icon: "rescue", tone: "brandy", note: "Disaster Management Officers" },
+    { label: "Responders & Officers", value: countRole("Rescue Team") + countRole("Disaster Management Officer"), icon: "rescue", tone: "brandy", note: "Rescue team members and DM officers" },
     { label: "Suspended", value: suspended, icon: "alert", tone: "sun", note: "Cannot sign in" },
   ];
 
@@ -119,7 +119,7 @@ export default function Users() {
               aria-pressed={tab === key}
               onClick={() => setTab(key)}
             >
-              {key === "all" ? "All" : key}
+              {key === "all" ? "All" : roleLabel(key)}
               <span className="rt-chipcount">{key === "all" ? users.length : countRole(key)}</span>
             </button>
           ))}
@@ -174,7 +174,7 @@ export default function Users() {
                     <span className="rt-sub">{phoneText(u.phone)}</span>
                   </td>
                   <td>
-                    <span className={`us-badge us-badge--${slug(u.role)}`}>{u.role}</span>
+                    <span className={`us-badge us-badge--${slug(u.role)}`}>{roleLabel(u.role)}</span>
                   </td>
                   <td>{u.team || u.address || <span className="rt-muted">—</span>}</td>
                   <td>
