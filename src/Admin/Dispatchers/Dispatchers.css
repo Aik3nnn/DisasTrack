@@ -1,0 +1,29 @@
+/* Dispatchers screen. Reuses the rt-* layout classes from Rescue Teams. */
+
+/* Duty status dropdown (same look as the team availability dropdown) */
+.dp-status {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dp-status--on-duty { background: #e3efe3; color: #2f6b34; }
+.dp-status--on-break { background: #fcf0cf; color: #9a6b00; }
+.dp-status--off-duty { background: #eceae6; color: #6b717b; }
+
+/* Caseload links sit side by side */
+.dp-cases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.dp-load {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #7a808a;
+}

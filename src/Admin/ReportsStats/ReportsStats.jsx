@@ -1,0 +1,329 @@
+import { useMemo, useState } from "react";
+import {
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip,
+} from "chart.js";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
+import Icon from "../Icon.jsx";
+import {
+  INCIDENTS,
+  INCIDENT_TYPES,
+  PRIORITIES,
+  TEAMS,
+} from "../IncidentReports/incidentsData.js";
+import { downloadCSV } from "../adminHelpers.js";
+import "./ReportsStats.css";
+
+// Tell Chart.js which chart parts we use (required once).
+ChartJS.register(
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip,
+  Legend,
+  Filler
+);
+
+// DisasTrack palette
+const BRANDY = "#8f250c";
+const SUN = "#f2c14e";
+const JET = "#2a2d34";
+const SLATE = "#5c6b7a";
+const STONE = "#e4e0d9";
+
+const TYPE_COLORS = [BRANDY, SUN, JET, SLATE, "#c4673f", "#8a9aa8", "#d9a441", "#b8b2a7"];
+const PRIORITY_COLORS = { Critical: BRANDY, High: "#c4673f", Medium: SUN, Low: SLATE };
+const STATUS_LIST = ["Pending", "Verified", "In Progress", "Resolved", "Duplicate", "Rejected"];
+
+// Time filter. Incident times are stored as "minutes ago".
+const RANGES = [
+  { key: "1h", label: "Last hour", minutes: 60 },
+  { key: "4h", label: "Last 4 hours", minutes: 240 },
+  { key: "all", label: "All reports", minutes: Infinity },
+];
+
+// Counts how many items match each label: count(items, "type", ["Flood", "Fire"]) -> [3, 2]
+const countBy = (items, field, labels) =>
+  labels.map((label) => items.filter((item) => item[field] === label).length);
+
+export default function ReportsStats() {
+  const [range, setRange] = useState("all");
+  const [type, setType] = useState("all");
+
+  const maxMinutes = RANGES.find((r) => r.key === range).minutes;
+
+  // The incidents that match the filters above the charts.
+  const incidents = useMemo(
+    () =>
+      INCIDENTS.filter(
+        (i) => i.minutesAgo <= maxMinutes && (type === "all" || i.type === type)
+      ),
+    [maxMinutes, type]
+  );
+
+  // ----- summary numbers -----
+  const total = incidents.length;
+  const resolved = incidents.filter((i) => i.status === "Resolved").length;
+  const critical = incidents.filter((i) => i.priority === "Critical").length;
+  const active = incidents.filter((i) => ["Pending", "Verified", "In Progress"].includes(i.status)).length;
+  const resolveRate = total ? Math.round((resolved / total) * 100) : 0;
+
+  const stats = [
+    { label: "Total Reports", value: total, icon: "reports", tone: "slate", note: "In selected range" },
+    { label: "Resolved", value: resolved, icon: "check", tone: "jet", note: `${resolveRate}% resolution rate` },
+    { label: "Critical", value: critical, icon: "alert", tone: "brandy", note: "Highest priority" },
+    { label: "Still Active", value: active, icon: "clock", tone: "sun", note: "Pending, verified or in progress" },
+  ];
+
+  // ----- chart data -----
+  // 1) Reports by type (doughnut). Only show types that have reports.
+  const typeLabels = INCIDENT_TYPES.filter((t) => incidents.some((i) => i.type === t));
+  const typeData = {
+    labels: typeLabels,
+    datasets: [
+      {
+        data: countBy(incidents, "type", typeLabels),
+        backgroundColor: TYPE_COLORS,
+        borderWidth: 2,
+        borderColor: "#fff",
+      },
+    ],
+  };
+
+  // 2) Reports by priority (bar)
+  const priorityData = {
+    labels: PRIORITIES,
+    datasets: [
+      {
+        label: "Reports",
+        data: countBy(incidents, "priority", PRIORITIES),
+        backgroundColor: PRIORITIES.map((p) => PRIORITY_COLORS[p]),
+        borderRadius: 6,
+      },
+    ],
+  };
+
+  // 3) Reports by status (bar)
+  const statusData = {
+    labels: STATUS_LIST,
+    datasets: [
+      {
+        label: "Reports",
+        data: countBy(incidents, "status", STATUS_LIST),
+        backgroundColor: SLATE,
+        borderRadius: 6,
+      },
+    ],
+  };
+
+  // 4) Reports per hour (line). Hour 0 = the last 60 minutes.
+  // NOTE: the sample data only covers about 8 hours. When real timestamps come
+  // from Firebase, change this to count reports per day instead.
+  const HOURS = 8;
+  const perHour = Array.from({ length: HOURS }, () => 0);
+  incidents.forEach((i) => {
+    const hour = Math.floor(i.minutesAgo / 60);
+    if (hour < HOURS) perHour[hour] += 1;
+  });
+  const hourLabels = perHour.map((_, hour) => (hour === 0 ? "Now" : `${hour}h ago`));
+  const trendData = {
+    // Oldest on the left, newest on the right
+    labels: [...hourLabels].reverse(),
+    datasets: [
+      {
+        label: "Reports",
+        data: [...perHour].reverse(),
+        borderColor: BRANDY,
+        backgroundColor: "rgba(143, 37, 12, 0.12)",
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: BRANDY,
+      },
+    ],
+  };
+
+  // Shared options for the bar and line charts
+  const axisOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: STONE } },
+    },
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: "62%",
+    plugins: { legend: { position: "right" } },
+  };
+
+  // ----- rescue team table -----
+  const teamRows = TEAMS.map((team) => {
+    const mine = incidents.filter((i) => i.team === team.id);
+    return {
+      name: team.name,
+      specialty: team.specialty,
+      assigned: mine.length,
+      inProgress: mine.filter((i) => i.status === "In Progress").length,
+      resolved: mine.filter((i) => i.status === "Resolved").length,
+    };
+  });
+
+  // ----- downloads -----
+  function exportCSV() {
+    downloadCSV(
+      "disastrack-incident-summary.csv",
+      ["ID", "Type", "Location", "Priority", "Status", "Minutes ago", "Assigned team"],
+      incidents.map((i) => [
+        i.id,
+        i.type,
+        i.location,
+        i.priority,
+        i.status,
+        i.minutesAgo,
+        TEAMS.find((t) => t.id === i.team)?.name || "None",
+      ])
+    );
+  }
+
+  // The browser's print window has a "Save as PDF" option.
+  const exportPDF = () => window.print();
+
+  return (
+    <div className="rt-page">
+      {/* filters + downloads */}
+      <div className="rt-toolbar rs-noprint">
+        <div className="rs-filters">
+          <div className="admin-chips" role="group" aria-label="Time range">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                className={`admin-chip ${range === r.key ? "is-active" : ""}`}
+                aria-pressed={range === r.key}
+                onClick={() => setRange(r.key)}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          <select className="rs-select" value={type} onChange={(e) => setType(e.target.value)} aria-label="Incident type">
+            <option value="all">All incident types</option>
+            {INCIDENT_TYPES.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="rt-toolbar__right">
+          <button type="button" className="admin-btn" onClick={exportCSV}>
+            Download CSV
+          </button>
+          <button type="button" className="admin-btn admin-btn--primary" onClick={exportPDF}>
+            Download PDF
+          </button>
+        </div>
+      </div>
+
+      {/* summary cards */}
+      <section className="admin-stats" aria-label="Report summary">
+        {stats.map((s) => (
+          <article key={s.label} className="admin-card admin-stat">
+            <div>
+              <p className="admin-stat__label">{s.label}</p>
+              <p className="admin-stat__value">{s.value}</p>
+              <p className="admin-stat__note">{s.note}</p>
+            </div>
+            <span className={`admin-stat__chip admin-stat__chip--${s.tone}`}>
+              <Icon name={s.icon} size={20} />
+            </span>
+          </article>
+        ))}
+      </section>
+
+      {total === 0 ? (
+        <section className="admin-card rs-card">
+          <p className="rs-empty">No reports match these filters.</p>
+        </section>
+      ) : (
+        <div className="rs-grid">
+          <section className="admin-card rs-card rs-card--wide" aria-label="Reports over time">
+            <h2 className="admin-card__title">Reports over time</h2>
+            <p className="admin-card__sub">Number of reports received each hour</p>
+            <div className="rs-chart">
+              <Line data={trendData} options={axisOptions} />
+            </div>
+          </section>
+
+          <section className="admin-card rs-card" aria-label="Reports by type">
+            <h2 className="admin-card__title">Reports by type</h2>
+            <p className="admin-card__sub">What kind of emergencies are reported</p>
+            <div className="rs-chart">
+              <Doughnut data={typeData} options={doughnutOptions} />
+            </div>
+          </section>
+
+          <section className="admin-card rs-card" aria-label="Reports by priority">
+            <h2 className="admin-card__title">Reports by priority</h2>
+            <p className="admin-card__sub">How urgent the reports are</p>
+            <div className="rs-chart">
+              <Bar data={priorityData} options={axisOptions} />
+            </div>
+          </section>
+
+          <section className="admin-card rs-card rs-card--wide" aria-label="Reports by status">
+            <h2 className="admin-card__title">Reports by status</h2>
+            <p className="admin-card__sub">Where each report is in the response process</p>
+            <div className="rs-chart">
+              <Bar data={statusData} options={axisOptions} />
+            </div>
+          </section>
+
+          <section className="admin-card rs-card rs-card--wide" aria-label="Rescue team performance">
+            <h2 className="admin-card__title">Rescue team activity</h2>
+            <p className="admin-card__sub">Reports handled by each team in the selected range</p>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Team</th>
+                    <th scope="col">Specialty</th>
+                    <th scope="col">Assigned</th>
+                    <th scope="col">In progress</th>
+                    <th scope="col">Resolved</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamRows.map((t) => (
+                    <tr key={t.name}>
+                      <td><span className="admin-table__strong">{t.name}</span></td>
+                      <td>{t.specialty}</td>
+                      <td>{t.assigned}</td>
+                      <td>{t.inProgress}</td>
+                      <td className="rs-rate">{t.resolved}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
