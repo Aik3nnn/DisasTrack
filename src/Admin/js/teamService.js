@@ -72,6 +72,21 @@ export async function setTeamStatus(id, status) {
   }
 }
 
+// Called when an incident is dispatched or finished:
+//   incidentId = "DT-1042"  -> the team is "Deployed" and its assignment is that incident
+//   incidentId = null       -> the team is "Available" again and the assignment is cleared
+// (The Dashboard counts and the Live Map's dispatch lines read these two fields.)
+export async function setTeamAssignment(id, incidentId) {
+  try {
+    await update(ref(db, `rescueTeams/${id}`), {
+      status: incidentId ? "Deployed" : "Available",
+      assignment: incidentId || null,
+    });
+  } catch (err) {
+    throw new Error(friendlyMessage(err));
+  }
+}
+
 export async function deleteTeam(team) {
   try {
     await remove(ref(db, `rescueTeams/${team.id}`));

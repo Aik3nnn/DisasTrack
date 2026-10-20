@@ -38,7 +38,7 @@ function exportCsv(list) {
   const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
   const lines = [
     head,
-    ...list.map((i) => [i.id, i.type, i.location, i.reporter, i.priority, i.status, ago(i.minutesAgo)]),
+    ...list.map((i) => [i.id, i.type, i.location, i.reporter, i.priority, i.status, ago(i.createdAt)]),
   ].map((row) => row.map(esc).join(","));
 
   const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
@@ -51,7 +51,9 @@ function exportCsv(list) {
 }
 
 export default function IncidentReports() {
-  const { incidents, update } = useIncidents();
+  const { incidents, loading, error, update, loadSamples } = useIncidents();
+  const [seedError, setSeedError] = useState("");
+  const [seeding, setSeeding] = useState(false);
   const navigate = useNavigate();
 
   const [tabKey, setTabKey] = useState("all");
@@ -86,7 +88,8 @@ export default function IncidentReports() {
         (!q || [i.id, i.type, i.location, i.reporter].some((v) => v.toLowerCase().includes(q)))
     );
 
-    const byNewest = (a, b) => a.minutesAgo - b.minutesAgo;
+    // ISO timestamps sort as text; newest first
+    const byNewest = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt));
     const byPriority = (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || byNewest(a, b);
     return [...list].sort(sort === "priority" ? byPriority : byNewest);
   }, [incidents, tabKey, type, priority, sort, query]);
@@ -106,9 +109,21 @@ export default function IncidentReports() {
 
   const pendingSelected = incidents.filter((i) => selected.includes(i.id) && i.status === "Pending");
   const verifySelected = () => {
-    pendingSelected.forEach((i) => update(i.id, { status: "Verified" }, "Report verified (bulk action)"));
+    pendingSelected.forEach((i) => update(i.id, { status: "Verified" }, "Report verified (bulk action)").catch((err) => setSeedError(err.message)));
     setSelected([]);
   };
+
+  // One-time: saves the sample incidents in Firebase so the screens have something to show.
+  async function addSamples() {
+    setSeeding(true);
+    setSeedError("");
+    try {
+      await loadSamples();
+    } catch (err) {
+      setSeedError(err.message);
+    }
+    setSeeding(false);
+  }
 
   const clearFilters = () => {
     setTabKey("all");
@@ -238,7 +253,7 @@ export default function IncidentReports() {
                   <td>{r.reporter}</td>
                   <td><Badge label={r.priority} /></td>
                   <td><Badge label={r.status} /></td>
-                  <td className="ir-muted">{ago(r.minutesAgo)}</td>
+                  <td className="ir-muted">{ago(r.createdAt)}</td>
                   <td className="ir-table__action">
                     <button type="button" className="ir-btn ir-btn--sm ir-btn--link" onClick={() => navigate(`${LIST_PATH}/${r.id}`)}>
                       Review
@@ -249,7 +264,23 @@ export default function IncidentReports() {
             </tbody>
           </table>
 
-          {rows.length === 0 && (
+          {loading && <div className="ir-empty"><p>Loading reports…</p></div>}
+
+          {!loading && (error || seedError) && (
+            <p className="ir-note" role="alert">{error?.message || seedError}</p>
+          )}
+
+          {!loading && incidents.length === 0 && (
+            <div className="ir-empty">
+              <h3>No incident reports yet</h3>
+              <p>Reports from residents appear here as soon as they are saved in Firebase (/incidents). You can also load the sample reports to try the screens.</p>
+              <button type="button" className="ir-btn ir-btn--sm ir-btn--primary" onClick={addSamples} disabled={seeding}>
+                {seeding ? "Saving…" : "Load sample incidents"}
+              </button>
+            </div>
+          )}
+
+          {!loading && incidents.length > 0 && rows.length === 0 && (
             <div className="ir-empty">
               <h3>No reports match your filters</h3>
               <p>Try a different status, type or search term.</p>

@@ -1,21 +1,43 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useIncidents } from "./IncidentsContext.jsx";
-import { INCIDENT_TYPES, PRIORITIES, TEAMS, ago } from "./incidentsData.js";
+import { INCIDENT_TYPES, PRIORITIES, ago, formatCoords } from "./incidentsData.js";
 import { Badge, IconAlert, IconBack, IconCheck, IconImage } from "./incidentShared.jsx";
+import { useTeams } from "../js/useTeams.js";
+import { setTeamAssignment } from "../js/teamService.js";
 
 const LIST_PATH = "/admin/incident-reports";
+
+// Straight-line distance in km between two points (used to show how far a team is).
+function distanceKm(a, b) {
+  if (!a || !b || ![a.lat, a.lng, b.lat, b.lng].every(Number.isFinite)) return null;
+  const rad = (deg) => (deg * Math.PI) / 180;
+  const h =
+    Math.sin(rad(b.lat - a.lat) / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
 
 export default function IncidentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { incidents, update } = useIncidents();
+  const { incidents, loading, update } = useIncidents();
+  const { teams } = useTeams(); // live list from Firebase /rescueTeams
 
   const [teamId, setTeamId] = useState(null);
+  const [error, setError] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
 
   const incident = incidents.find((i) => i.id === id);
+
+  if (!incident && loading) {
+    return (
+      <div className="ir-page">
+        <p className="ir-muted">Loading report…</p>
+      </div>
+    );
+  }
 
   if (!incident) {
     return (
@@ -31,31 +53,60 @@ export default function IncidentDetail() {
 
   const { status } = incident;
   const isOpen = ["Pending", "Verified", "In Progress"].includes(status);
-  const assignedTeam = TEAMS.find((t) => t.id === incident.team);
-  const chosenTeam = TEAMS.find((t) => t.id === teamId);
-  const log = [...incident.activity].sort((a, b) => b.minutesAgo - a.minutesAgo);
+  const assignedTeam = teams.find((t) => t.id === incident.team);
+  const chosenTeam = teams.find((t) => t.id === teamId);
+  // Newest first. "at" is an ISO timestamp, so it sorts as text.
+  const log = [...incident.activity].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const coords = formatCoords(incident.lat, incident.lng);
 
-  const verify = () => update(id, { status: "Verified" }, "Report verified by Admin");
+  // Runs a save and shows the error (if any) instead of failing silently.
+  async function run(task) {
+    setError("");
+    try {
+      await task();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  // Frees the team when its incident is finished or reopened.
+  const releaseTeam = () => (incident.team ? setTeamAssignment(incident.team, null) : null);
+
+  const verify = () => run(() => update(id, { status: "Verified" }, "Report verified by Admin"));
   const confirmReject = () => {
-    update(id, { status: "Rejected" }, `Report rejected: ${reason.trim() || "no reason given"}`);
+    run(() => update(id, { status: "Rejected" }, `Report rejected: ${reason.trim() || "no reason given"}`));
     setRejecting(false);
     setReason("");
   };
   const changePriority = (p) => {
-    if (p !== incident.priority) update(id, { priority: p }, `Priority changed from ${incident.priority} to ${p}`);
+    if (p !== incident.priority)
+      run(() => update(id, { priority: p }, `Priority changed from ${incident.priority} to ${p}`));
   };
-  const changeType = (event) =>
-    update(id, { type: event.target.value }, `Classification changed to ${event.target.value}`);
-  const dispatch = () => {
-    update(id, { status: "In Progress", team: chosenTeam.id }, `${chosenTeam.name} dispatched`);
-    setTeamId(null);
+  const changeType = (event) => {
+    const value = event.target.value;
+    run(() => update(id, { type: value }, `Classification changed to ${value}`));
   };
-  const resolve = () => update(id, { status: "Resolved" }, "Marked as resolved");
-  const reopen = () => update(id, { status: "Pending", team: null }, "Report reopened");
+  const dispatch = () =>
+    run(async () => {
+      // 1) the incident (status + team id)  2) the team (Deployed + which incident)
+      await update(id, { status: "In Progress", team: chosenTeam.id }, `${chosenTeam.name} dispatched`);
+      await setTeamAssignment(chosenTeam.id, id);
+      setTeamId(null);
+    });
+  const resolve = () =>
+    run(async () => {
+      await update(id, { status: "Resolved" }, "Marked as resolved");
+      await releaseTeam();
+    });
+  const reopen = () =>
+    run(async () => {
+      await update(id, { status: "Pending", team: null }, "Report reopened");
+      await releaseTeam();
+    });
   const markDuplicate = () =>
-    update(id, { status: "Duplicate" }, `Marked as duplicate of ${incident.duplicateOf}`);
+    run(() => update(id, { status: "Duplicate" }, `Marked as duplicate of ${incident.duplicateOf}`));
   const notDuplicate = () =>
-    update(id, { duplicateOf: null, match: null }, "Duplicate flag dismissed");
+    run(() => update(id, { duplicateOf: null, match: null }, "Duplicate flag dismissed"));
 
   return (
     <div className="ir-page">
@@ -86,10 +137,10 @@ export default function IncidentDetail() {
               <dl className="ir-fields">
                 <div className="ir-field"><dt>Reporter</dt><dd>{incident.reporter}</dd></div>
                 <div className="ir-field"><dt>Contact</dt><dd>{incident.phone}</dd></div>
-                <div className="ir-field"><dt>Reported</dt><dd>{ago(incident.minutesAgo)}</dd></div>
+                <div className="ir-field"><dt>Reported</dt><dd>{ago(incident.createdAt)}</dd></div>
                 <div className="ir-field"><dt>Incident type</dt><dd>{incident.type}</dd></div>
                 <div className="ir-field"><dt>Location</dt><dd>{incident.location}</dd></div>
-                <div className="ir-field"><dt>GPS coordinates</dt><dd>{incident.coords}</dd></div>
+                <div className="ir-field"><dt>GPS coordinates</dt><dd>{coords}</dd></div>
               </dl>
               <h4 className="ir-subtitle">Description</h4>
               <p className="ir-desc">{incident.description}</p>
@@ -118,7 +169,7 @@ export default function IncidentDetail() {
           <section className="ir-card">
             <div className="ir-card__head">
               <h3 className="ir-card__title">Location</h3>
-              <span className="ir-muted">GPS {incident.coords}</span>
+              <span className="ir-muted">GPS {coords}</span>
             </div>
             <div className="ir-card__body">
               {/* Placeholder map. Swap for Leaflet / OpenStreetMap later. */}
@@ -141,6 +192,8 @@ export default function IncidentDetail() {
         <div className="ir-stack">
           <section className="ir-card">
             <div className="ir-card__head"><h3 className="ir-card__title">Actions</h3></div>
+
+            {error && <p className="ir-note" role="alert">{error}</p>}
 
             {/* verification */}
             <div className="ir-section">
@@ -234,12 +287,16 @@ export default function IncidentDetail() {
                 <>
                   <div className="ir-assigned">
                     <strong>{assignedTeam.name}</strong>
-                    <span>{assignedTeam.specialty} · on the way</span>
+                    <span>{assignedTeam.type} · on the way</span>
                   </div>
                   <button type="button" className="ir-btn ir-btn--dark ir-btn--block" onClick={resolve}>
                     Mark as resolved
                   </button>
                 </>
+              )}
+
+              {status === "In Progress" && incident.team && !assignedTeam && (
+                <p className="ir-muted">Assigned to team {incident.team} (not found in Rescue Teams).</p>
               )}
 
               {status === "Resolved" && assignedTeam && (
@@ -251,8 +308,12 @@ export default function IncidentDetail() {
 
               {(status === "Pending" || status === "Verified") && (
                 <>
-                  {TEAMS.map((t) => {
-                    const free = t.status !== "Deployed";
+                  {teams.length === 0 && (
+                    <p className="ir-muted">No rescue teams yet. Add them on the Rescue Teams screen.</p>
+                  )}
+                  {teams.map((t) => {
+                    const free = t.status === "Available" || t.status === "Standby";
+                    const km = distanceKm(incident, t.location);
                     const picked = teamId === t.id;
                     return (
                       <button
@@ -266,7 +327,9 @@ export default function IncidentDetail() {
                         <span className="ir-team__radio" aria-hidden="true" />
                         <span>
                           <span className="ir-team__name">{t.name}</span>
-                          <span className="ir-team__meta">{t.distance} · {t.status}</span>
+                          <span className="ir-team__meta">
+                            {km !== null ? `${km.toFixed(1)} km · ` : `${t.type} · `}{t.status}
+                          </span>
                         </span>
                       </button>
                     );
@@ -318,7 +381,7 @@ export default function IncidentDetail() {
                 {log.map((entry, i) => (
                   <li key={i}>
                     <span className="ir-log__text">{entry.text}</span>
-                    <span className="ir-log__time">{ago(entry.minutesAgo)}</span>
+                    <span className="ir-log__time">{ago(entry.at)}</span>
                   </li>
                 ))}
               </ol>

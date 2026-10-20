@@ -1,100 +1,38 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { useIncidents } from "../IncidentReports/IncidentsContext.jsx";
 import { ago } from "../IncidentReports/incidentsData.js";
 import { useTeams } from "../js/useTeams.js";
 import { clearTeamLocations, setTeamLocations } from "../js/teamService.js";
+import {
+  L,
+  OPEN_STATUSES,
+  PRIORITY_COLOR,
+  PRIORITY_RANK,
+  TEAM_COLOR,
+  createMap,
+  drawDispatchLines,
+  hasPoint,
+  incidentMarker,
+  syncMarkers,
+  teamMarker,
+} from "./mapShared.js";
 
 /* ------------------------------------------------------------------
    Live Map  (OpenStreetMap tiles + Leaflet)
 
-   - Incidents come from the shared incident list (same data as Incident Reports),
-     each one has numbers  lat  and  lng.
+   - Incidents come from Firebase (/incidents) through the shared incident list
+     (same data as Incident Reports, Dashboard and Reports & Stats), each one has
+     numbers  lat  and  lng.
    - Rescue teams come from Firebase (/rescueTeams). A team shows on the map when it has
      location = { lat, lng, updatedAt }. Firebase pushes every change, so markers move
      by themselves (no refresh).
    - Leaflet is used directly (not react-leaflet): the map is created once, and the markers
      are updated in place when the data changes.
+   - Colors, pins and popups are shared with the Dashboard map (see mapShared.js).
 ------------------------------------------------------------------- */
 
-const CENTER = [14.64, 121.08]; // Quezon City / Marikina area
-const OPEN_STATUSES = ["Pending", "Verified", "In Progress"];
 const PRIORITIES = ["Critical", "High", "Medium", "Low"];
-const PRIORITY_RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 };
-const PRIORITY_COLOR = { Critical: "#8f250c", High: "#c8641d", Medium: "#f2c14e", Low: "#5c6b7a" };
-const TEAM_COLOR = { Available: "#2f6b34", Standby: "#c98f0a", Deployed: "#2a2d34", "Off duty": "#9aa0a8" };
-const STALE_AFTER_MIN = 2; // a location older than this is shown as "last seen"
-const LIST_PATH = "/admin/incident-reports";
-
-const incidentIcon = (priority, faded) =>
-  L.divIcon({
-    className: "lm-icon",
-    html: `<span class="lm-dot${faded ? " is-faded" : ""}" style="--c:${PRIORITY_COLOR[priority] || "#5c6b7a"}"></span>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    popupAnchor: [0, -10],
-  });
-
-const teamIcon = (status, stale) =>
-  L.divIcon({
-    className: "lm-icon",
-    html: `<span class="lm-team${stale ? " is-faded" : ""}" style="--c:${TEAM_COLOR[status] || "#5c6b7a"}"></span>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    popupAnchor: [0, -10],
-  });
-
-// Popup content is built with textContent (never HTML strings), because names and
-// locations typed by residents must not be able to inject markup.
-function popupEl(title, lines, action) {
-  const root = document.createElement("div");
-  root.className = "lm-popup";
-  const heading = document.createElement("strong");
-  heading.textContent = title;
-  root.append(heading);
-  lines.forEach((text) => {
-    const p = document.createElement("p");
-    p.textContent = text;
-    root.append(p);
-  });
-  if (action) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "admin-btn admin-btn--sm";
-    button.textContent = action.label;
-    button.addEventListener("click", action.onClick);
-    root.append(button);
-  }
-  return root;
-}
-
-// Adds new markers, moves/restyles existing ones, removes the ones that are gone.
-function syncMarkers(group, store, items) {
-  const seen = new Set();
-  items.forEach(({ key, latlng, icon, popup }) => {
-    seen.add(key);
-    const marker = store.get(key);
-    if (!marker) {
-      const created = L.marker(latlng, { icon }).bindPopup(popup);
-      store.set(key, created);
-      group.addLayer(created);
-    } else {
-      marker.setLatLng(latlng);
-      marker.setIcon(icon);
-      marker.setPopupContent(popup);
-    }
-  });
-  store.forEach((marker, key) => {
-    if (!seen.has(key)) {
-      group.removeLayer(marker);
-      store.delete(key);
-    }
-  });
-}
-
-const hasPoint = (p) => p && Number.isFinite(p.lat) && Number.isFinite(p.lng);
 
 // Demo only: a stable starting point for a team (inside the Quezon City / Marikina area).
 function demoStart(id) {
@@ -135,27 +73,16 @@ export default function LiveMap() {
             (scope === "all" || OPEN_STATUSES.includes(i.status)) &&
             (priority === "all" || i.priority === priority)
         )
-        .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.minutesAgo - b.minutesAgo),
+        .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || String(b.createdAt).localeCompare(String(a.createdAt))),
     [incidents, scope, priority]
   );
   const teamsOnMap = useMemo(() => teams.filter((t) => hasPoint(t.location)), [teams]);
 
   // ---------- 1. create the map once ----------
   useEffect(() => {
-    const map = L.map(mapEl.current, { center: CENTER, zoom: 12 });
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
-
-    layers.current = {
-      map,
-      lines: L.layerGroup().addTo(map),
-      incidents: L.layerGroup().addTo(map),
-      teams: L.layerGroup().addTo(map),
-      incidentMarkers: new Map(),
-      teamMarkers: new Map(),
-    };
+    const created = createMap(mapEl.current);
+    const { map } = created;
+    layers.current = created;
     fitted.current = false;
 
     return () => {
@@ -171,16 +98,7 @@ export default function LiveMap() {
     syncMarkers(
       l.incidents,
       l.incidentMarkers,
-      shown.map((i) => ({
-        key: i.id,
-        latlng: [i.lat, i.lng],
-        icon: incidentIcon(i.priority, !OPEN_STATUSES.includes(i.status)),
-        popup: popupEl(
-          `${i.id} · ${i.type}`,
-          [`${i.priority} priority · ${i.status}`, i.location, `${i.reporter} · ${ago(i.minutesAgo)}`],
-          { label: "Review report", onClick: () => navigate(`${LIST_PATH}/${i.id}`) }
-        ),
-      }))
+      shown.map((i) => incidentMarker(i, navigate, ago))
     );
 
     // Zoom to the incidents the first time some are shown.
@@ -199,38 +117,10 @@ export default function LiveMap() {
     syncMarkers(
       l.teams,
       l.teamMarkers,
-      visibleTeams.map((t) => {
-        const minutes = Math.max(0, Math.round((now - (t.location.updatedAt || 0)) / 60000));
-        const stale = minutes >= STALE_AFTER_MIN;
-        return {
-          key: t.id,
-          latlng: [t.location.lat, t.location.lng],
-          icon: teamIcon(t.status, stale),
-          popup: popupEl(
-            t.name,
-            [
-              `${t.type} · ${t.status}`,
-              `Leader: ${t.leader || "—"}`,
-              stale ? `Last seen ${minutes} min ago` : "Live",
-            ],
-            t.assignment ? { label: `Open ${t.assignment}`, onClick: () => navigate(`${LIST_PATH}/${t.assignment}`) } : null
-          ),
-        };
-      })
+      visibleTeams.map((t) => teamMarker(t, now, navigate))
     );
 
-    // A line from each team to the incident it is assigned to.
-    l.lines.clearLayers();
-    visibleTeams.forEach((t) => {
-      const target = incidents.find((i) => i.id === t.assignment && hasPoint(i));
-      if (target) {
-        L.polyline([[t.location.lat, t.location.lng], [target.lat, target.lng]], {
-          color: "#2a2d34",
-          weight: 2,
-          dashArray: "6 6",
-        }).addTo(l.lines);
-      }
-    });
+    drawDispatchLines(l.lines, visibleTeams, incidents);
   }, [teamsOnMap, showTeams, incidents, now, navigate]);
 
   // ---------- demo: pretend the rescue team phones are sending locations ----------
@@ -347,7 +237,7 @@ export default function LiveMap() {
                   <span className="lm-dot" style={{ "--c": PRIORITY_COLOR[i.priority] }} aria-hidden="true" />
                   <span className="lm-item__text">
                     <span className="lm-item__title">{i.type} · {i.location}</span>
-                    <span className="lm-item__meta">{i.id} · {i.status} · {ago(i.minutesAgo)}</span>
+                    <span className="lm-item__meta">{i.id} · {i.status} · {ago(i.createdAt)}</span>
                   </span>
                 </button>
               </li>

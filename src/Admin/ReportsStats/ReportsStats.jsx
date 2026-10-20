@@ -13,12 +13,9 @@ import {
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import Icon from "../Icon.jsx";
-import {
-  INCIDENTS,
-  INCIDENT_TYPES,
-  PRIORITIES,
-  TEAMS,
-} from "../IncidentReports/incidentsData.js";
+import { INCIDENT_TYPES, PRIORITIES, minutesSince } from "../IncidentReports/incidentsData.js";
+import { useIncidents } from "../IncidentReports/IncidentsContext.jsx";
+import { useTeams } from "../js/useTeams.js";
 import { downloadCSV } from "../js/adminHelpers.js";
 import "./ReportsStats.css";
 
@@ -46,7 +43,7 @@ const TYPE_COLORS = [BRANDY, SUN, JET, SLATE, "#c4673f", "#8a9aa8", "#d9a441", "
 const PRIORITY_COLORS = { Critical: BRANDY, High: "#c4673f", Medium: SUN, Low: SLATE };
 const STATUS_LIST = ["Pending", "Verified", "In Progress", "Resolved", "Duplicate", "Rejected"];
 
-// Time filter. Incident times are stored as "minutes ago".
+// Time filter. Compared against each incident's createdAt (ISO timestamp).
 const RANGES = [
   { key: "1h", label: "Last hour", minutes: 60 },
   { key: "4h", label: "Last 4 hours", minutes: 240 },
@@ -60,16 +57,18 @@ const countBy = (items, field, labels) =>
 export default function ReportsStats() {
   const [range, setRange] = useState("all");
   const [type, setType] = useState("all");
+  const { incidents: allIncidents } = useIncidents(); // same Firebase list as the Dashboard and Live Map
+  const { teams } = useTeams();
 
   const maxMinutes = RANGES.find((r) => r.key === range).minutes;
 
   // The incidents that match the filters above the charts.
   const incidents = useMemo(
     () =>
-      INCIDENTS.filter(
-        (i) => i.minutesAgo <= maxMinutes && (type === "all" || i.type === type)
+      allIncidents.filter(
+        (i) => minutesSince(i.createdAt) <= maxMinutes && (type === "all" || i.type === type)
       ),
-    [maxMinutes, type]
+    [allIncidents, maxMinutes, type]
   );
 
   // ----- summary numbers -----
@@ -128,12 +127,12 @@ export default function ReportsStats() {
   };
 
   // 4) Reports per hour (line). Hour 0 = the last 60 minutes.
-  // NOTE: the sample data only covers about 8 hours. When real timestamps come
-  // from Firebase, change this to count reports per day instead.
+  // NOTE: this chart only covers the last 8 hours. For longer ranges, change it to
+  // count reports per day instead.
   const HOURS = 8;
   const perHour = Array.from({ length: HOURS }, () => 0);
   incidents.forEach((i) => {
-    const hour = Math.floor(i.minutesAgo / 60);
+    const hour = Math.floor(minutesSince(i.createdAt) / 60);
     if (hour < HOURS) perHour[hour] += 1;
   });
   const hourLabels = perHour.map((_, hour) => (hour === 0 ? "Now" : `${hour}h ago`));
@@ -172,11 +171,11 @@ export default function ReportsStats() {
   };
 
   // ----- rescue team table -----
-  const teamRows = TEAMS.map((team) => {
+  const teamRows = teams.map((team) => {
     const mine = incidents.filter((i) => i.team === team.id);
     return {
       name: team.name,
-      specialty: team.specialty,
+      specialty: team.type,
       assigned: mine.length,
       inProgress: mine.filter((i) => i.status === "In Progress").length,
       resolved: mine.filter((i) => i.status === "Resolved").length,
@@ -194,8 +193,8 @@ export default function ReportsStats() {
         i.location,
         i.priority,
         i.status,
-        i.minutesAgo,
-        TEAMS.find((t) => t.id === i.team)?.name || "None",
+        minutesSince(i.createdAt),
+        teams.find((t) => t.id === i.team)?.name || "None",
       ])
     );
   }

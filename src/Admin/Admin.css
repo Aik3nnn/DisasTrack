@@ -374,6 +374,12 @@
   background: #f1eee9;
 }
 
+/* The Dashboard map is a real Leaflet map (same as the Live Map screen). */
+.admin-map--live {
+  z-index: 0; /* keeps Leaflet's panes under the sidebar and dialogs */
+  height: 300px;
+}
+
 .admin-block {
   position: absolute;
   border-radius: 6px;
