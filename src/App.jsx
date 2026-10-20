@@ -13,6 +13,7 @@ import { IncidentsLayout } from "./Admin/IncidentReports/IncidentsContext.jsx";
 import IncidentReports from "./Admin/IncidentReports/IncidentReports.jsx";
 import IncidentDetail from "./Admin/IncidentReports/IncidentDetail.jsx";
 import RescueTeams from "./Admin/RescueTeams/RescueTeams.jsx";
+import LiveMap from "./Admin/LiveMap/LiveMap.jsx";
 import Users from "./Admin/Users/Users.jsx";
 import ReportsStats from "./Admin/ReportsStats/ReportsStats.jsx";
 import Audit from "./Admin/Audit/Audit.jsx";
@@ -238,7 +239,7 @@ export default function App() {
             <Route index element={<IncidentReports />} />
             <Route path=":id" element={<IncidentDetail />} />
           </Route>
-          <Route path="live-map" element={<ComingSoon title="Live Map" />} />
+          <Route path="live-map" element={<LiveMap />} />
           <Route path="rescue-teams" element={<RescueTeams />} />
           <Route path="users" element={<Users />} />
           <Route path="reports" element={<ReportsStats />} />

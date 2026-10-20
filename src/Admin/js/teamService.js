@@ -79,3 +79,34 @@ export async function deleteTeam(team) {
     throw new Error(friendlyMessage(err));
   }
 }
+
+// ---------- live locations ----------
+// A team's phone writes its position at  /rescueTeams/{id}/location = { lat, lng, updatedAt }.
+// Until the rescue team app does that, the Live Map's "Simulate" button writes it.
+
+// positions = { "T-01": { lat, lng }, ... }  (saved in one update)
+export async function setTeamLocations(positions) {
+  const changes = {};
+  const now = Date.now();
+  Object.entries(positions).forEach(([id, { lat, lng }]) => {
+    changes[`rescueTeams/${id}/location`] = { lat, lng, updatedAt: now };
+  });
+  try {
+    await update(ref(db), changes);
+  } catch (err) {
+    throw new Error(friendlyMessage(err));
+  }
+}
+
+// Removes the saved location of the given teams.
+export async function clearTeamLocations(teams) {
+  const changes = {};
+  teams.forEach((t) => {
+    changes[`rescueTeams/${t.id}/location`] = null;
+  });
+  try {
+    await update(ref(db), changes);
+  } catch (err) {
+    throw new Error(friendlyMessage(err));
+  }
+}

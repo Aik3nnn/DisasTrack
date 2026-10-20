@@ -55,13 +55,27 @@ function coordsFor(location) {
 
 // [id, type, location, reporter, phone, priority, status, minutesAgo,
 //  description, photos, team, duplicateOf, match%]
+// The sample places above share one point per area, so every report gets a small
+// stable offset (about +/- 400 m, worked out from its id). Real reports will carry
+// their own lat/lng from the phone's GPS (or the pin the resident placed).
+function pointFor(id, location) {
+  const [baseLat, baseLng] = coordsFor(location).split(",").map(Number);
+  let hash = 0;
+  for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return {
+    lat: baseLat + ((hash % 100) - 50) / 12500,
+    lng: baseLng + ((Math.floor(hash / 100) % 100) - 50) / 12500,
+  };
+}
+
 const mk = ([
   id, type, location, reporter, phone, priority, status, minutesAgo,
   description, photos = 0, team = null, duplicateOf = null, match = null,
 ]) => ({
   id, type, location, reporter, phone, priority, status, minutesAgo,
   description, photos, team, duplicateOf, match,
-  coords: coordsFor(location),
+  ...pointFor(id, location), // lat, lng (numbers, used by the Live Map)
+  coords: (({ lat, lng }) => `${lat.toFixed(4)}, ${lng.toFixed(4)}`)(pointFor(id, location)),
   activity: [
     { text: `Report submitted by ${reporter}`, minutesAgo },
     ...(duplicateOf ? [{ text: `Flagged as possible duplicate of ${duplicateOf}`, minutesAgo }] : []),

@@ -1809,3 +1809,129 @@
   font-size: 12.5px;
   color: #5b616b;
 }
+
+/* =====================================================================
+   Live Map. Every class here starts with "lm-".
+   ===================================================================== */
+
+.lm-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lm-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.lm-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+.lm-mapcard { padding: 12px; }
+
+.lm-map {
+  position: relative;
+  z-index: 0; /* keeps Leaflet's panes under the sidebar and dialogs */
+  height: calc(100vh - 250px);
+  min-height: 420px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.lm-legend { flex-wrap: wrap; margin: 10px 4px 2px; }
+
+.lm-side {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 190px);
+  min-height: 420px;
+}
+
+.lm-list {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.lm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  color: inherit;
+}
+
+.lm-item:hover { background: #f6f3ee; }
+
+.lm-item__text { display: flex; flex-direction: column; min-width: 0; }
+.lm-item__title { font-weight: 600; font-size: 13px; }
+.lm-item__meta { margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+
+.lm-demo {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.lm-demo p { margin: 0 0 8px; }
+.lm-demo__buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* markers (Leaflet divIcons) */
+.lm-icon { background: none; border: 0; }
+
+.lm-dot,
+.lm-team,
+.lm-key {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid #fff;
+  background: var(--c);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.lm-dot { border-radius: 50%; }
+.lm-team { border-radius: 4px; }
+.lm-dot.is-faded,
+.lm-team.is-faded { opacity: 0.5; }
+
+.lm-key { width: 12px; height: 12px; box-shadow: none; }
+.lm-key--dot { border-radius: 50%; }
+.lm-key--team { border-radius: 3px; }
+.lm-key--line {
+  width: 20px;
+  height: 0;
+  border: 0;
+  border-top: 2px dashed #2a2d34;
+  background: none;
+}
+
+/* popup */
+.lm-popup { font-family: "Inter", system-ui, sans-serif; min-width: 180px; }
+.lm-popup strong { display: block; font-size: 13.5px; margin-bottom: 4px; }
+.lm-popup p { margin: 2px 0; font-size: 12.5px; color: #4a4f58; }
+.lm-popup .admin-btn { margin-top: 8px; }
+
+@media (max-width: 1100px) {
+  .lm-layout { grid-template-columns: 1fr; }
+  .lm-side { max-height: none; min-height: 0; }
+  .lm-list { max-height: 320px; }
+}
