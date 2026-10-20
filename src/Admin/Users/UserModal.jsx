@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "../Icon.jsx";
-import { phoneText } from "../adminHelpers.js";
-import { TEAMS } from "../RescueTeams/rescueTeamsData.js"; // team names come from the Rescue Teams screen
+import { phoneText } from "../js/adminHelpers.js";
 import { ROLES, STATUSES, roleLabel } from "./usersData.js";
 
 const EMPTY = {
@@ -20,9 +19,10 @@ const EMPTY = {
  * Add / edit dialog for a user account.
  *   user     = the user being edited, or null to add a new one
  *   existing = all users (used to block duplicate usernames and emails)
+ *   teams    = rescue teams from Firebase (for the "Rescue team" dropdown)
  *   onSave(values), onClose()
  */
-export default function UserModal({ user, existing, onSave, onClose }) {
+export default function UserModal({ user, existing, teams = [], onSave, onClose }) {
   const isEdit = Boolean(user);
 
   const [form, setForm] = useState(user ? { ...EMPTY, ...user, phone: phoneText(user.phone) } : EMPTY);
@@ -63,7 +63,10 @@ export default function UserModal({ user, existing, onSave, onClose }) {
 
     if (!form.phone.trim()) next.phone = "Enter a contact number.";
 
-    if (form.role === "Rescue Team" && !form.team) next.team = "Choose the team this member belongs to.";
+    if (form.role === "Rescue Team") {
+      if (!form.team) next.team = "Choose the team this member belongs to.";
+      else if (!teams.some((t) => t.name === form.team)) next.team = "This team no longer exists. Choose another team.";
+    }
 
     if (!isEdit && form.password.length < 8) next.password = "Use at least 8 characters.";
 
@@ -152,9 +155,9 @@ export default function UserModal({ user, existing, onSave, onClose }) {
           {form.role === "Rescue Team" && (
             <div className="rt-field rt-field--full">
               <label htmlFor="us-team">Rescue team</label>
-              <select id="us-team" value={form.team} onChange={set("team")}>
+              <select id="us-team" value={teams.some((t) => t.name === form.team) ? form.team : ""} onChange={set("team")}>
                 <option value="">Choose a team</option>
-                {TEAMS.map((t) => (
+                {teams.map((t) => (
                   <option key={t.id} value={t.name}>{t.name}</option>
                 ))}
               </select>

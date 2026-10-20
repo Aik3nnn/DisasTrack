@@ -2,14 +2,16 @@ import { useMemo, useState } from "react";
 import Icon from "../Icon.jsx";
 import UserModal from "./UserModal.jsx";
 import { ROLES, roleLabel } from "./usersData.js";
-import { useAccounts } from "../useAccounts.js";
-import { createAccount, deleteAccount, moveOldAccounts, oldAccountsToMove, updateAccount } from "../accountService.js";
-import { downloadCSV, formatDate, phoneText, slug } from "../adminHelpers.js";
+import { useAccounts } from "../js/useAccounts.js";
+import { useTeams } from "../js/useTeams.js";
+import { createAccount, deleteAccount, moveOldAccounts, oldAccountsToMove, updateAccount } from "../js/accountService.js";
+import { downloadCSV, formatDate, phoneText, slug } from "../js/adminHelpers.js";
 import { logAction } from "../Audit/auditLog.js";
 import "./Users.css";
 
 export default function Users() {
   const { accounts, loading, error } = useAccounts();
+  const { teams } = useTeams(); // rescue teams from Firebase (for the team dropdown)
   // This screen shows everyone except admins and old dispatcher accounts (hidden).
   const users = useMemo(
     () => accounts.filter((u) => u.role !== "Admin" && u.role !== "Dispatcher"),
@@ -45,6 +47,8 @@ export default function Users() {
   async function save(values) {
     // Do not save the password or the id inside the profile.
     const { password, id, legacy, ...profile } = values; // eslint-disable-line no-unused-vars
+    // Save which team (by id) a rescue team member belongs to, next to the team name.
+    profile.teamId = teams.find((t) => t.name === profile.team)?.id || "";
     if (modal.user) {
       await updateAccount(modal.user, profile);
       logAction({ category: "Account", action: "User updated", target: profile.name, details: `${profile.role} account edited` });
@@ -255,7 +259,7 @@ export default function Users() {
       </section>
 
       {modal && (
-        <UserModal user={modal.user} existing={users} onSave={save} onClose={() => setModal(null)} />
+        <UserModal user={modal.user} existing={users} teams={teams} onSave={save} onClose={() => setModal(null)} />
       )}
 
       {removing && (

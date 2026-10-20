@@ -19,7 +19,7 @@ import {
   PRIORITIES,
   TEAMS,
 } from "../IncidentReports/incidentsData.js";
-import { downloadCSV } from "../adminHelpers.js";
+import { downloadCSV } from "../js/adminHelpers.js";
 import "./ReportsStats.css";
 
 // Tell Chart.js which chart parts we use (required once).

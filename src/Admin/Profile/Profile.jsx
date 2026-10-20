@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { logAction } from "../Audit/auditLog.js";
 import { useAuditLogs } from "../Audit/useAuditLogs.js";
-import { changeOwnPassword, updateOwnProfile } from "../accountService.js";
-import { formatDate, formatDateTime, phoneText, resizePhoto } from "../adminHelpers.js";
+import { changeOwnPassword, updateOwnProfile } from "../js/accountService.js";
+import { formatDate, formatDateTime, phoneText, resizePhoto } from "../js/adminHelpers.js";
 import "./Profile.css";
 
 // Counts how many simple password rules are met (0 to 4).

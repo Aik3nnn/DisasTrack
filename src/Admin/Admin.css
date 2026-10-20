@@ -412,6 +412,7 @@
 
 .admin-pin--pending { background: var(--tuscan-sun); }
 .admin-pin--team { background: var(--blue-slate); }
+.admin-pin--other { background: #b8b3a8; }
 
 .admin-legend {
   display: flex;
@@ -438,6 +439,7 @@
 .admin-dot--critical { background: var(--brandy); }
 .admin-dot--pending { background: var(--tuscan-sun); }
 .admin-dot--team { background: var(--blue-slate); }
+.admin-dot--other { background: #b8b3a8; }
 
 .admin-link-btn {
   padding: 0;
@@ -549,6 +551,7 @@
 .admin-badge--in-progress { background: var(--jet-black); color: #fff; }
 .admin-badge--verified { background: #e6e9ed; color: #3e4955; }
 .admin-badge--resolved { background: #e8e8e9; color: #4a4f58; }
+.admin-badge--rejected { background: #f5e3de; color: #7a3a2a; }
 .admin-badge--duplicate { background: #f6f3ee; color: #7a808a; border: 1px solid var(--line); }
 
 /* ---------- table ---------- */
@@ -1774,4 +1777,35 @@
   .rt-modal__body { grid-template-columns: 1fr; }
   .rt-search { width: 100%; }
   .rt-toolbar__right { width: 100%; }
+}
+
+/* first-time setup banner + progress bar (Rescue Teams) */
+.rt-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.rt-progress { margin-top: 16px; }
+
+.rt-progress__bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eeebe6;
+}
+
+.rt-progress__bar span {
+  display: block;
+  height: 100%;
+  background: var(--brandy);
+  transition: width 0.2s;
+}
+
+.rt-progress p {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: #5b616b;
 }

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import Icon from "../Icon.jsx";
 import { CATEGORIES } from "./auditLog.js";
 import { useAuditLogs } from "./useAuditLogs.js";
-import { downloadCSV, formatDateTime, slug } from "../adminHelpers.js";
+import { downloadCSV, formatDateTime, slug } from "../js/adminHelpers.js";
 import "./Audit.css";
 
 const PAGE_SIZE = 10;

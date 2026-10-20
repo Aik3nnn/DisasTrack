@@ -5,7 +5,7 @@ import "./Admin/Admin.css";
 import logo from "./assets/disastrack-icon.png";
 import { signOut } from "firebase/auth";
 import { auth } from "./firebase.js";
-import { loadAdminProfile, signInAdmin } from "./Admin/accountService.js";
+import { loadAdminProfile, signInAdmin } from "./Admin/js/accountService.js";
 import AdminLayout from "./Admin/AdminLayout.jsx";
 import Dashboard from "./Admin/Dashboard.jsx";
 import ComingSoon from "./Admin/ComingSoon.jsx";
@@ -224,23 +224,27 @@ export default function App() {
         element={user ? <Navigate to="/admin" replace /> : <Login onLogin={handleLogin} />}
       />
 
-      <Route
-        path="/admin"
-        element={
-          user ? <AdminLayout user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="incident-reports" element={<IncidentsLayout />}>
-          <Route index element={<IncidentReports />} />
-          <Route path=":id" element={<IncidentDetail />} />
+      {/* The incident list is held here, above every admin screen, so the dashboard
+          and the Incident Reports screens always show the same data. */}
+      <Route element={<IncidentsLayout />}>
+        <Route
+          path="/admin"
+          element={
+            user ? <AdminLayout user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="incident-reports">
+            <Route index element={<IncidentReports />} />
+            <Route path=":id" element={<IncidentDetail />} />
+          </Route>
+          <Route path="live-map" element={<ComingSoon title="Live Map" />} />
+          <Route path="rescue-teams" element={<RescueTeams />} />
+          <Route path="users" element={<Users />} />
+          <Route path="reports" element={<ReportsStats />} />
+          <Route path="audit" element={<Audit />} />
+          <Route path="profile" element={<Profile user={user} onUpdate={handleUpdateUser} />} />
         </Route>
-        <Route path="live-map" element={<ComingSoon title="Live Map" />} />
-        <Route path="rescue-teams" element={<RescueTeams />} />
-        <Route path="users" element={<Users />} />
-        <Route path="reports" element={<ReportsStats />} />
-        <Route path="audit" element={<Audit />} />
-        <Route path="profile" element={<Profile user={user} onUpdate={handleUpdateUser} />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
