@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useIncidents } from "./IncidentsContext.jsx";
-import { INCIDENT_TYPES, PRIORITIES, ago, formatCoords } from "./incidentsData.js";
+import { INCIDENT_TYPES, PRIORITIES, ago, duplicatesOf, formatCoords, statusLabel } from "./incidentsData.js";
+import IncidentMap from "./IncidentMap.jsx";
 import { Badge, IconAlert, IconBack, IconCheck, IconImage } from "./incidentShared.jsx";
 import { useTeams } from "../js/useTeams.js";
 import { setTeamAssignment } from "../js/teamService.js";
@@ -58,6 +59,8 @@ export default function IncidentDetail() {
   // Newest first. "at" is an ISO timestamp, so it sorts as text.
   const log = [...incident.activity].sort((a, b) => String(b.at).localeCompare(String(a.at)));
   const coords = formatCoords(incident.lat, incident.lng);
+  const duplicates = duplicatesOf(incident.id, incidents); // reports from other residents about this same incident
+  const original = incident.duplicateOf ? incidents.find((i) => i.id === incident.duplicateOf) : null;
 
   // Runs a save and shows the error (if any) instead of failing silently.
   async function run(task) {
@@ -172,18 +175,7 @@ export default function IncidentDetail() {
               <span className="ir-muted">GPS {coords}</span>
             </div>
             <div className="ir-card__body">
-              {/* Placeholder map. Swap for Leaflet / OpenStreetMap later. */}
-              <div className="ir-map" role="img" aria-label={`Map showing ${incident.location}`}>
-                <span className="ir-map__road ir-map__road--h" style={{ top: "34%" }} />
-                <span className="ir-map__road ir-map__road--h" style={{ top: "72%" }} />
-                <span className="ir-map__road ir-map__road--v" style={{ left: "28%" }} />
-                <span className="ir-map__road ir-map__road--v" style={{ left: "66%" }} />
-                <span className="ir-map__block" style={{ left: "34%", top: "40%", width: "14%", height: "24%" }} />
-                <span className="ir-map__block" style={{ left: "72%", top: "40%", width: "14%", height: "24%" }} />
-                <span className="ir-map__block" style={{ left: "6%", top: "8%", width: "16%", height: "20%" }} />
-                <span className="ir-map__pin" />
-                <span className="ir-map__label">{incident.location}</span>
-              </div>
+              <IncidentMap incident={incident} teams={teams} />
             </div>
           </section>
         </div>
@@ -238,7 +230,7 @@ export default function IncidentDetail() {
               {!isOpen && (
                 <>
                   <p className="ir-note">
-                    This report is <strong>{status.toLowerCase()}</strong> and can no longer be edited.
+                    This report is <strong>{statusLabel(status).toLowerCase()}</strong> and can no longer be edited.
                   </p>
                   <button type="button" className="ir-btn ir-btn--block" onClick={reopen}>
                     Reopen report
@@ -353,6 +345,42 @@ export default function IncidentDetail() {
               )}
             </div>
           </section>
+
+          {status === "Duplicate" && incident.duplicateOf && (
+            <section className="ir-dup" aria-label="Duplicate report">
+              <div className="ir-dup__title"><IconAlert /> Duplicate report</div>
+              <p>
+                This is the same incident as{" "}
+                <Link to={`${LIST_PATH}/${incident.duplicateOf}`}>{incident.duplicateOf}</Link>
+                {original ? ` (${original.reporter}, ${statusLabel(original.status)})` : ""}
+                {incident.match ? ` · ${incident.match}% match` : ""}.
+              </p>
+            </section>
+          )}
+
+          {duplicates.length > 0 && (
+            <section className="ir-card" aria-label="Duplicate reports">
+              <details className="ir-dups" open>
+                <summary className="ir-dups__summary">
+                  <span className="ir-card__title">Duplicate reports ({duplicates.length})</span>
+                  <span className="ir-muted">from other residents</span>
+                </summary>
+                <ul className="ir-dups__list">
+                  {duplicates.map((d) => (
+                    <li key={d.id} className="ir-dups__item">
+                      <div className="ir-dups__row">
+                        <Link className="ir-id" to={`${LIST_PATH}/${d.id}`}>{d.id}</Link>
+                        <Badge label={d.status} />
+                        <span className="ir-muted">{ago(d.createdAt)}</span>
+                      </div>
+                      <div className="ir-dups__who">{d.reporter} · {d.phone}</div>
+                      <p className="ir-dups__desc">{d.description}</p>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </section>
+          )}
 
           {incident.duplicateOf && status === "Pending" && (
             <section className="ir-dup" aria-label="Possible duplicate">

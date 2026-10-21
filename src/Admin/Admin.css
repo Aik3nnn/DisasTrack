@@ -768,21 +768,43 @@
 }
 
 /* ---------- toolbar ---------- */
+/* Two tidy rows: status tabs + export on top, search + filters underneath. */
 .ir-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
 }
 
-.ir-tabs,
-.ir-toolbar__right {
+.ir-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.ir-tab { flex-shrink: 0; }
+
+.ir-toolbar__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ir-toolbar__top .ir-tabs { flex: 1 1 auto; min-width: 0; }
+
+.ir-toolbar__filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
+
+.ir-toolbar__filters .ir-searchbox { flex: 1 1 220px; max-width: 340px; width: auto; }
+.ir-toolbar__export { flex-shrink: 0; height: 32px; }
 
 .ir-tab {
   display: inline-flex;
@@ -956,15 +978,15 @@
 .ir-badge--medium { background: var(--ir-sun-tint); color: var(--ir-sun-dark); }
 .ir-badge--low { background: var(--ir-slate-tint); color: var(--ir-slate); }
 .ir-badge--pending { background: var(--ir-sun); color: var(--ir-jet); }
-.ir-badge--verified { background: var(--ir-slate-tint); color: var(--ir-slate); }
+.ir-badge--verified { background: var(--ir-sun-tint); color: var(--ir-sun-dark); }
 .ir-badge--in-progress { background: var(--ir-jet); color: var(--ir-snow); }
 .ir-badge--resolved { background: #e9e9ea; color: var(--ir-jet); }
-.ir-badge--duplicate,
-.ir-badge--rejected {
+.ir-badge--duplicate {
   background: var(--ir-snow);
   color: var(--ir-slate);
   box-shadow: inset 0 0 0 1px var(--ir-stone);
 }
+.ir-badge--rejected { background: var(--ir-brandy-tint); color: var(--ir-brandy); }
 
 /* ---------- pagination + empty ---------- */
 .ir-pager {
@@ -1940,4 +1962,80 @@
   .lm-layout { grid-template-columns: 1fr; }
   .lm-side { max-height: none; min-height: 0; }
   .lm-list { max-height: 320px; }
+}
+
+
+/* ---------- live map on the incident detail page ---------- */
+.ir-map--live { height: 320px; z-index: 0; /* keeps Leaflet's panes under the sidebar and dialogs */ }
+.ir-map__none { margin: 8px 0 0; }
+
+/* ---------- duplicate reports dropdown ---------- */
+.ir-dups__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 24px;
+  cursor: pointer;
+  list-style: none;
+}
+.ir-dups__summary::-webkit-details-marker { display: none; }
+.ir-dups__summary::after { content: "▾"; margin-left: auto; transition: transform 0.15s; }
+.ir-dups[open] .ir-dups__summary::after { transform: rotate(180deg); }
+.ir-dups__list { margin: 0; padding: 0 24px 16px; list-style: none; }
+.ir-dups__item { padding: 12px 0; border-top: 1px solid var(--ir-stone); }
+.ir-dups__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ir-dups__who { margin-top: 4px; font-size: 12.5px; font-weight: 600; }
+.ir-dups__desc { margin: 4px 0 0; font-size: 12.5px; color: var(--ir-slate); }
+
+/* list: duplicate expander under a report */
+.ir-dupbtn {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  height: 24px;
+  padding: 0 8px 0 7px;
+  border: 1px solid var(--ir-stone);
+  border-radius: 999px;
+  background: var(--ir-head);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ir-slate);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.ir-dupbtn > svg { width: 13px; height: 13px; }
+.ir-dupbtn:hover { background: var(--ir-sun-tint); border-color: var(--ir-sun); color: var(--ir-sun-dark); }
+.ir-dupbtn:focus-visible { outline: 3px solid var(--ir-sun); outline-offset: 2px; }
+.ir-dupbtn.is-open { background: var(--ir-sun-tint); border-color: var(--ir-sun); color: var(--ir-sun-dark); }
+.ir-dupbtn__count {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--ir-sun);
+  color: var(--ir-jet);
+  font-size: 10.5px;
+  line-height: 16px;
+  text-align: center;
+}
+.ir-dupbtn__chev { display: inline-flex; transition: transform 0.18s; }
+.ir-dupbtn__chev svg { width: 12px; height: 12px; }
+.ir-dupbtn.is-open .ir-dupbtn__chev { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .ir-dupbtn__chev { transition: none; } }
+
+.ir-subrow td { background: #faf8f4; font-size: 12.5px; }
+.ir-subrow__indent { padding-left: 28px !important; position: relative; }
+.ir-subrow__indent::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 50%;
+  width: 10px;
+  border-left: 2px solid var(--ir-stone);
+  border-bottom: 2px solid var(--ir-stone);
+  border-bottom-left-radius: 8px;
 }

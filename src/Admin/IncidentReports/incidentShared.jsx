@@ -1,3 +1,5 @@
+import { statusLabel } from "./incidentsData.js";
+
 const slug = (text) => text.toLowerCase().replace(/\s+/g, "-");
 
 /** Priority or status pill. Colors live in Admin/Admin.css (.ir-badge--*) */
@@ -34,6 +36,19 @@ export const IconBack = () => (
 export const IconDownload = () => (
   <svg {...base}>
     <path d="M12 4v11M7 11l5 5 5-5M5 20h14" />
+  </svg>
+);
+
+export const IconLayers = () => (
+  <svg {...base}>
+    <path d="M12 4l8 4-8 4-8-4 8-4z" />
+    <path d="M4 12l8 4 8-4M4 16l8 4 8-4" />
+  </svg>
+);
+
+export const IconChevronDown = () => (
+  <svg {...base}>
+    <path d="M6 9l6 6 6-6" />
   </svg>
 );
 

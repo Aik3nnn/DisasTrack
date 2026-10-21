@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIncidents } from "../IncidentReports/IncidentsContext.jsx";
-import { ago } from "../IncidentReports/incidentsData.js";
+import { ago, statusLabel } from "../IncidentReports/incidentsData.js";
 import { useTeams } from "../js/useTeams.js";
 import { clearTeamLocations, setTeamLocations } from "../js/teamService.js";
 import {
@@ -237,7 +237,7 @@ export default function LiveMap() {
                   <span className="lm-dot" style={{ "--c": PRIORITY_COLOR[i.priority] }} aria-hidden="true" />
                   <span className="lm-item__text">
                     <span className="lm-item__title">{i.type} · {i.location}</span>
-                    <span className="lm-item__meta">{i.id} · {i.status} · {ago(i.createdAt)}</span>
+                    <span className="lm-item__meta">{i.id} · {statusLabel(i.status)} · {ago(i.createdAt)}</span>
                   </span>
                 </button>
               </li>

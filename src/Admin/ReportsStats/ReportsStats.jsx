@@ -13,7 +13,7 @@ import {
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import Icon from "../Icon.jsx";
-import { INCIDENT_TYPES, PRIORITIES } from "../IncidentReports/incidentsData.js";
+import { INCIDENT_TYPES, PRIORITIES, statusLabel } from "../IncidentReports/incidentsData.js";
 import { useIncidents } from "../IncidentReports/IncidentsContext.jsx";
 import { useTeams } from "../js/useTeams.js";
 import { downloadCSV, formatDateTime } from "../js/adminHelpers.js";
@@ -134,7 +134,7 @@ export default function ReportsStats() {
 
   // 3) Reports by status (bar)
   const statusData = {
-    labels: STATUS_LIST,
+    labels: STATUS_LIST.map(statusLabel),
     datasets: [
       {
         label: "Reports",
@@ -213,7 +213,7 @@ export default function ReportsStats() {
         i.type,
         i.location,
         i.priority,
-        i.status,
+        statusLabel(i.status),
         formatDateTime(i.createdAt),
         teams.find((t) => t.id === i.team)?.name || "None",
       ])

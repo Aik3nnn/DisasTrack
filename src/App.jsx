@@ -19,6 +19,7 @@ import ReportsStats from "./Admin/ReportsStats/ReportsStats.jsx";
 import Audit from "./Admin/Audit/Audit.jsx";
 import { setAuditActor } from "./Admin/Audit/auditLog.js";
 import Profile from "./Admin/Profile/Profile.jsx";
+import LoadingScreen from "./LoadingScreen.jsx";
 
 function UserIcon() {
   return (
@@ -216,7 +217,7 @@ export default function App() {
     setUser((current) => ({ ...current, ...changes }));
   }
 
-  if (checking) return <p style={{ padding: 24 }}>Loading…</p>;
+  if (checking) return <LoadingScreen message="Checking your session…" />;
 
   return (
     <Routes>

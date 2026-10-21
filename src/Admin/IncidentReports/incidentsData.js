@@ -21,15 +21,32 @@ export const INCIDENT_TYPES = [
   "Other",
 ];
 
-// Tabs above the table. "Closed" groups the two dead-end statuses.
+// What the admin SEES for each saved status. The saved values in Firebase stay the same
+// (so the resident app and old records keep working): Verified = "Awaiting Assignment"
+// (verified, no team yet) and In Progress = "Team Assigned" (a team was dispatched).
+export const STATUS_LABEL = {
+  Verified: "Awaiting Assignment",
+  "In Progress": "Team Assigned",
+};
+export const statusLabel = (status) => STATUS_LABEL[status] || status;
+
+// Tabs above the table.
 export const TABS = [
   { key: "all", label: "All" },
   { key: "Pending", label: "Pending" },
-  { key: "Verified", label: "Verified" },
-  { key: "In Progress", label: "In Progress" },
+  { key: "Verified", label: "Awaiting Assignment" },
+  { key: "In Progress", label: "Team Assigned" },
   { key: "Resolved", label: "Resolved" },
-  { key: "closed", label: "Closed", statuses: ["Duplicate", "Rejected"] },
+  { key: "Rejected", label: "Rejected" },
+  { key: "Duplicate", label: "Duplicate" },
 ];
+
+/** Reports already marked "Duplicate" of `id` (other residents who reported the same incident). */
+export function duplicatesOf(id, incidents) {
+  return incidents
+    .filter((i) => i.id !== id && i.status === "Duplicate" && i.duplicateOf === id)
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+}
 
 /** Minutes since an ISO timestamp (never negative). */
 export function minutesSince(iso, now = Date.now()) {

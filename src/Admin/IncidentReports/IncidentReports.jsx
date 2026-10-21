@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useIncidents } from "./IncidentsContext.jsx";
-import { INCIDENT_TYPES, PRIORITIES, TABS, ago } from "./incidentsData.js";
+import { INCIDENT_TYPES, PRIORITIES, TABS, ago, duplicatesOf, statusLabel } from "./incidentsData.js";
 import {
   Badge,
+  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconDownload,
+  IconLayers,
   IconSearch,
 } from "./incidentShared.jsx";
 
@@ -38,7 +40,7 @@ function exportCsv(list) {
   const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
   const lines = [
     head,
-    ...list.map((i) => [i.id, i.type, i.location, i.reporter, i.priority, i.status, ago(i.createdAt)]),
+    ...list.map((i) => [i.id, i.type, i.location, i.reporter, i.priority, statusLabel(i.status), ago(i.createdAt)]),
   ].map((row) => row.map(esc).join(","));
 
   const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
@@ -63,6 +65,10 @@ export default function IncidentReports() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState([]);
+  // Duplicate dropdowns: closed by default, open by default on the Duplicate tab.
+  // `toggled` holds the reports the admin flipped from that default.
+  const [toggled, setToggled] = useState([]);
+  const toggleExpanded = (id) => setToggled((t) => (t.includes(id) ? t.filter((x) => x !== id) : [...t, id]));
 
   // any filter change goes back to page 1 and clears the selection
   const onFilter = (setter) => (event) => {
@@ -91,7 +97,22 @@ export default function IncidentReports() {
     // ISO timestamps sort as text; newest first
     const byNewest = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt));
     const byPriority = (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || byNewest(a, b);
-    return [...list].sort(sort === "priority" ? byPriority : byNewest);
+    // Duplicate tab: show the ORIGINAL report (its duplicates drop down under it)
+    // instead of listing each duplicate on its own.
+    let result = list;
+    if (tab.key === "Duplicate") {
+      const seen = new Set();
+      result = [];
+      list.forEach((d) => {
+        const parent = incidents.find((i) => i.id === d.duplicateOf);
+        const row = parent || d; // no original found: show the duplicate itself
+        if (!seen.has(row.id)) {
+          seen.add(row.id);
+          result.push(row);
+        }
+      });
+    }
+    return [...result].sort(sort === "priority" ? byPriority : byNewest);
   }, [incidents, tabKey, type, priority, sort, query]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -137,6 +158,7 @@ export default function IncidentReports() {
     <div className="ir-page">
       {/* tabs + filters */}
       <div className="ir-toolbar">
+        <div className="ir-toolbar__top">
         <div className="ir-tabs" role="tablist" aria-label="Report status">
           {TABS.map((t) => (
             <button
@@ -149,14 +171,28 @@ export default function IncidentReports() {
                 setTabKey(t.key);
                 setPage(1);
                 setSelected([]);
+                setToggled([]);
               }}
             >
               {t.label} <span className="ir-tab__count">{counts[t.key]}</span>
             </button>
           ))}
         </div>
+          <button type="button" className="ir-btn ir-btn--sm ir-toolbar__export" onClick={() => exportCsv(filtered)}>
+            <IconDownload /> Export CSV
+          </button>
+        </div>
 
-        <div className="ir-toolbar__right">
+        <div className="ir-toolbar__filters">
+          <label className="ir-searchbox">
+            <IconSearch />
+            <input
+              type="search"
+              placeholder="Search reports…"
+              value={query}
+              onChange={onFilter(setQuery)}
+            />
+          </label>
           <select className="ir-select" value={type} onChange={onFilter(setType)} aria-label="Filter by type">
             <option value="all">Type: All</option>
             {INCIDENT_TYPES.map((t) => (
@@ -173,18 +209,6 @@ export default function IncidentReports() {
             <option value="newest">Sort: Newest</option>
             <option value="priority">Sort: Priority</option>
           </select>
-          <label className="ir-searchbox">
-            <IconSearch />
-            <input
-              type="search"
-              placeholder="Search reports…"
-              value={query}
-              onChange={onFilter(setQuery)}
-            />
-          </label>
-          <button type="button" className="ir-btn ir-btn--sm" onClick={() => exportCsv(filtered)}>
-            <IconDownload /> Export CSV
-          </button>
         </div>
       </div>
 
@@ -231,36 +255,70 @@ export default function IncidentReports() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td className="ir-table__check">
-                    <input
-                      type="checkbox"
-                      className="ir-check"
-                      checked={selected.includes(r.id)}
-                      onChange={() => toggleRow(r.id)}
-                      aria-label={`Select ${r.id}`}
-                    />
-                  </td>
-                  <td><Link className="ir-id" to={`${LIST_PATH}/${r.id}`}>{r.id}</Link></td>
-                  <td>
-                    <span className="ir-strong">{r.type}</span>
-                    {r.duplicateOf && r.status === "Pending" && (
-                      <span className="ir-hint">Possible duplicate of {r.duplicateOf}</span>
-                    )}
-                  </td>
-                  <td>{r.location}</td>
-                  <td>{r.reporter}</td>
-                  <td><Badge label={r.priority} /></td>
-                  <td><Badge label={r.status} /></td>
-                  <td className="ir-muted">{ago(r.createdAt)}</td>
-                  <td className="ir-table__action">
-                    <button type="button" className="ir-btn ir-btn--sm ir-btn--link" onClick={() => navigate(`${LIST_PATH}/${r.id}`)}>
-                      Review
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((r) => {
+                const dups = duplicatesOf(r.id, incidents);
+                const open = tabKey === "Duplicate" && !toggled.includes(r.id);
+                return (
+                  <Fragment key={r.id}>
+                    <tr>
+                      <td className="ir-table__check">
+                        <input
+                          type="checkbox"
+                          className="ir-check"
+                          checked={selected.includes(r.id)}
+                          onChange={() => toggleRow(r.id)}
+                          aria-label={`Select ${r.id}`}
+                        />
+                      </td>
+                      <td><Link className="ir-id" to={`${LIST_PATH}/${r.id}`}>{r.id}</Link></td>
+                      <td>
+                        <span className="ir-strong">{r.type}</span>
+                        {r.status === "Duplicate" && r.duplicateOf && (
+                          <span className="ir-hint">Duplicate of {r.duplicateOf}</span>
+                        )}
+                        {tabKey === "Duplicate" && dups.length > 0 && (
+                          <button
+                            type="button"
+                            className={`ir-dupbtn ${open ? "is-open" : ""}`}
+                            aria-expanded={open}
+                            aria-label={`${open ? "Hide" : "Show"} ${dups.length} duplicate report${dups.length === 1 ? "" : "s"} of ${r.id}`}
+                            onClick={() => toggleExpanded(r.id)}
+                          >
+                            <IconLayers />
+                            <span className="ir-dupbtn__count">{dups.length}</span>
+                            <span>duplicate{dups.length === 1 ? "" : "s"}</span>
+                            <span className="ir-dupbtn__chev"><IconChevronDown /></span>
+                          </button>
+                        )}
+                      </td>
+                      <td>{r.location}</td>
+                      <td>{r.reporter}</td>
+                      <td><Badge label={r.priority} /></td>
+                      <td><Badge label={r.status} /></td>
+                      <td className="ir-muted">{ago(r.createdAt)}</td>
+                      <td className="ir-table__action">
+                        <button type="button" className="ir-btn ir-btn--sm ir-btn--link" onClick={() => navigate(`${LIST_PATH}/${r.id}`)}>
+                          Review
+                        </button>
+                      </td>
+                    </tr>
+                    {open &&
+                      dups.map((d) => (
+                        <tr key={d.id} className="ir-subrow">
+                          <td />
+                          <td className="ir-subrow__indent"><Link className="ir-id" to={`${LIST_PATH}/${d.id}`}>{d.id}</Link></td>
+                          <td>Duplicate of {r.id}</td>
+                          <td>{d.location}</td>
+                          <td>{d.reporter}</td>
+                          <td><Badge label={d.priority} /></td>
+                          <td><Badge label={d.status} /></td>
+                          <td className="ir-muted">{ago(d.createdAt)}</td>
+                          <td />
+                        </tr>
+                      ))}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
 

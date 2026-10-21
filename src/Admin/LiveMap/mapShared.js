@@ -5,6 +5,7 @@
 ------------------------------------------------------------------- */
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { statusLabel } from "../IncidentReports/incidentsData.js";
 
 export const CENTER = [14.88, 120.93]; // middle of Bulacan province
 export const DEFAULT_ZOOM = 10; // whole province in view
@@ -117,7 +118,7 @@ export function incidentMarker(i, navigate, ago) {
     icon: incidentIcon(i.priority, !OPEN_STATUSES.includes(i.status)),
     popup: popupEl(
       `${i.id} · ${i.type}`,
-      [`${i.priority} priority · ${i.status}`, i.location, `${i.reporter} · ${ago(i.createdAt)}`],
+      [`${i.priority} priority · ${statusLabel(i.status)}`, i.location, `${i.reporter} · ${ago(i.createdAt)}`],
       { label: "Review report", onClick: () => navigate(`${LIST_PATH}/${i.id}`) }
     ),
   };

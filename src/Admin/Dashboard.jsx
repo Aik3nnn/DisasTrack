@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
 import { useIncidents } from "./IncidentReports/IncidentsContext.jsx";
-import { ago, minutesSince } from "./IncidentReports/incidentsData.js";
+import { ago, minutesSince, statusLabel } from "./IncidentReports/incidentsData.js";
 import { useTeams } from "./js/useTeams.js";
 import {
   L,
@@ -265,7 +265,7 @@ export default function Dashboard() {
           >
             <option value="all">All statuses</option>
             {STATUS_FILTERS.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>{statusLabel(s)}</option>
             ))}
           </select>
         </div>
