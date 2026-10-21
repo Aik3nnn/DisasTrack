@@ -34,11 +34,11 @@ import {
 
 const PRIORITIES = ["Critical", "High", "Medium", "Low"];
 
-// Demo only: a stable starting point for a team (inside the Quezon City / Marikina area).
+// Demo only: a stable starting point for a team (around Malolos, Guiguinto and Plaridel, Bulacan).
 function demoStart(id) {
   let hash = 0;
   for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return { lat: 14.6 + (hash % 100) / 1000, lng: 121.03 + (Math.floor(hash / 100) % 100) / 900 };
+  return { lat: 14.82 + (hash % 100) / 1000, lng: 120.8 + (Math.floor(hash / 100) % 100) / 900 };
 }
 
 export default function LiveMap() {

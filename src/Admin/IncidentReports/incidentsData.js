@@ -53,12 +53,35 @@ export function formatCoords(lat, lng) {
   return Number.isFinite(lat) && Number.isFinite(lng) ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : "No GPS";
 }
 
+// One map point per town (the sample places below only name the town, so every
+// report starts from its town's point and gets a small offset in pointFor).
+const BULACAN_TOWNS = {
+  Malolos: [14.8527, 120.816],
+  Meycauayan: [14.737, 120.9608],
+  Marilao: [14.7581, 120.9483],
+  Bocaue: [14.799, 120.9264],
+  Balagtas: [14.815, 120.9086],
+  Guiguinto: [14.8333, 120.8789],
+  Plaridel: [14.8869, 120.8564],
+  Pulilan: [14.8987, 120.8478],
+  Calumpit: [14.916, 120.765],
+  Hagonoy: [14.8333, 120.7333],
+  Paombong: [14.8333, 120.7833],
+  Bulakan: [14.7936, 120.8795],
+  Obando: [14.7058, 120.9272],
+  "Santa Maria": [14.819, 121.011],
+  "San Jose del Monte": [14.8139, 121.0453],
+  Norzagaray: [14.915, 121.045],
+  Angat: [14.9333, 121.0333],
+  Baliuag: [14.9548, 120.8975],
+  "San Rafael": [14.9833, 120.9333],
+  "San Ildefonso": [15.0775, 120.9411],
+};
+
 function coordsFor(location) {
-  if (location.includes("Marikina")) return "14.6507, 121.1029";
-  if (location.includes("Pasig")) return "14.5764, 121.0851";
-  if (location.includes("Rizal") || location.includes("Antipolo")) return "14.6037, 121.3084";
-  if (location.includes("Quezon City") || location.includes("QC")) return "14.6760, 121.0437";
-  return "14.5995, 120.9842";
+  const town = Object.keys(BULACAN_TOWNS).find((name) => location.includes(name));
+  const [lat, lng] = BULACAN_TOWNS[town] || BULACAN_TOWNS.Malolos; // Malolos = provincial capital
+  return `${lat}, ${lng}`;
 }
 
 // [id, type, location, reporter, phone, priority, status, minutesAgo,
@@ -104,43 +127,43 @@ const mk = (now) => ([
 };
 
 const ROWS = [
-  ["DT-1042", "Flood", "Brgy. San Roque, Marikina", "Juan Santos", "0917 *** 4521", "Critical", "Pending", 4,
+  ["DT-1042", "Flood", "Brgy. Frances, Calumpit", "Juan Santos", "0917 *** 4521", "Critical", "Pending", 4,
     "Water level is rising fast along the main road. About 15 households are already affected, including children and elderly residents who need evacuation.", 3],
-  ["DT-1041", "Fire", "Tandang Sora, Quezon City", "Maria Reyes", "0928 *** 1187", "Critical", "In Progress", 11,
+  ["DT-1041", "Fire", "Brgy. Muzon, San Jose del Monte", "Maria Reyes", "0928 *** 1187", "Critical", "In Progress", 11,
     "Fire is spreading from a two-storey house to the neighboring homes. Neighbors are using buckets while waiting for responders.", 2, "T-02"],
-  ["DT-1040", "Landslide", "Rodriguez, Rizal", "Carlo Mendoza", "0915 *** 9032", "High", "Verified", 26,
+  ["DT-1040", "Landslide", "Brgy. Bitungol, Norzagaray", "Carlo Mendoza", "0915 *** 9032", "High", "Verified", 26,
     "Soil and rocks blocked the barangay road after heavy rain. Two houses near the slope are at risk of collapsing.", 4],
-  ["DT-1043", "Flood", "Katipunan Ave, QC", "Nina Co", "0917 *** 8830", "Low", "Pending", 31,
-    "Another report of the flooded stretch near the Katipunan overpass. Vehicles are slowing down but passing.", 1, null, "DT-1038", 92],
-  ["DT-1039", "Road hazard", "Commonwealth Ave, QC", "Ana Cruz", "0919 *** 7714", "Medium", "Resolved", 52,
+  ["DT-1043", "Flood", "MacArthur Highway, Meycauayan", "Nina Co", "0917 *** 8830", "Low", "Pending", 31,
+    "Another report of the flooded stretch near the MacArthur Highway overpass. Vehicles are slowing down but passing.", 1, null, "DT-1038", 92],
+  ["DT-1039", "Road hazard", "MacArthur Highway, Marilao", "Ana Cruz", "0919 *** 7714", "Medium", "Resolved", 52,
     "Two fallen trees are blocking the right lane after strong winds.", 2, "T-01"],
-  ["DT-1038", "Flood", "Katipunan Ave, QC", "Leo Garcia", "0926 *** 3358", "Low", "Duplicate", 58,
+  ["DT-1038", "Flood", "MacArthur Highway, Meycauayan", "Leo Garcia", "0926 *** 3358", "Low", "Duplicate", 58,
     "Knee-deep floodwater on the service road near the overpass.", 1, null, "DT-1043", 92],
-  ["DT-1037", "Medical emergency", "Cainta, Rizal", "Ben Tan", "0905 *** 6620", "Critical", "In Progress", 62,
+  ["DT-1037", "Medical emergency", "Brgy. Poblacion, Baliuag", "Ben Tan", "0905 *** 6620", "Critical", "In Progress", 62,
     "A resident collapsed inside a wet market. Neighbors are doing CPR while waiting for the ambulance.", 0, "T-05"],
-  ["DT-1036", "Power line", "Fairview, QC", "Rosa Diaz", "0918 *** 4409", "Medium", "Pending", 95,
+  ["DT-1036", "Power line", "Brgy. Lolomboy, Bocaue", "Rosa Diaz", "0918 *** 4409", "Medium", "Pending", 95,
     "A live wire is hanging low across the street after strong winds. Residents are keeping children away.", 2],
-  ["DT-1035", "Earthquake", "Marikina Heights", "Pia Lim", "0921 *** 5571", "High", "Verified", 70,
+  ["DT-1035", "Earthquake", "Brgy. Longos, Malolos", "Pia Lim", "0921 *** 5571", "High", "Verified", 70,
     "Cracks appeared on the wall of a three-storey building after the tremor. Occupants moved outside.", 3],
-  ["DT-1034", "Fire", "Sta. Lucia, Pasig", "Mark Villanueva", "0933 *** 2210", "High", "Resolved", 190,
+  ["DT-1034", "Fire", "Brgy. Banga, Plaridel", "Mark Villanueva", "0933 *** 2210", "High", "Resolved", 190,
     "Small fire in a junk shop, already controlled by neighbors. Requesting inspection for hot spots.", 1, "T-02"],
-  ["DT-1033", "Flood", "Provident Village, Marikina", "Joy Bautista", "0927 *** 7788", "Critical", "Resolved", 240,
+  ["DT-1033", "Flood", "Brgy. San Sebastian, Hagonoy", "Joy Bautista", "0927 *** 7788", "Critical", "Resolved", 240,
     "Flooding reached the second floor of several houses. Families were waiting on rooftops.", 4, "T-01"],
-  ["DT-1032", "Landslide", "Antipolo City", "Ramon Dizon", "0916 *** 1043", "High", "In Progress", 130,
+  ["DT-1032", "Landslide", "Brgy. Banaban, Angat", "Ramon Dizon", "0916 *** 1043", "High", "In Progress", 130,
     "Part of a hillside gave way and covered a footpath. Residents below are asking for assessment.", 2, "T-07"],
-  ["DT-1031", "Road hazard", "C5 Libis, QC", "Ella Ramos", "0935 *** 9921", "Medium", "Resolved", 300,
+  ["DT-1031", "Road hazard", "MacArthur Highway, Guiguinto", "Ella Ramos", "0935 *** 9921", "Medium", "Resolved", 300,
     "Large sinkhole forming on the outer lane near the flyover.", 2],
-  ["DT-1030", "Other", "Novaliches, QC", "Tess Cruz", "0912 *** 3307", "Low", "Rejected", 360,
+  ["DT-1030", "Other", "Brgy. Poblacion, Pulilan", "Tess Cruz", "0912 *** 3307", "Low", "Rejected", 360,
     "Report did not include a valid location or details.", 0],
-  ["DT-1029", "Flood", "Nangka, Marikina", "Paolo Reyes", "0917 *** 6015", "High", "Pending", 15,
+  ["DT-1029", "Flood", "Brgy. Poblacion, Paombong", "Paolo Reyes", "0917 *** 6015", "High", "Pending", 15,
     "Creek overflowed and water is entering ground-floor homes along the riverbank.", 2],
-  ["DT-1028", "Fire", "Commonwealth Ave, QC", "Dina Salvador", "0920 *** 8842", "Medium", "Verified", 45,
+  ["DT-1028", "Fire", "Brgy. Tarcan, Baliuag", "Dina Salvador", "0920 *** 8842", "Medium", "Verified", 45,
     "Smoke coming from a roadside food stall. Gas tank is nearby.", 1],
-  ["DT-1027", "Medical emergency", "San Mateo, Rizal", "Carl Uy", "0908 *** 2754", "Medium", "Resolved", 400,
+  ["DT-1027", "Medical emergency", "Brgy. Pulong Buhangin, Santa Maria", "Carl Uy", "0908 *** 2754", "Medium", "Resolved", 400,
     "Elderly resident with difficulty breathing after smoke exposure.", 0, "T-05"],
-  ["DT-1026", "Power line", "Batasan Hills, QC", "Hana Lee", "0929 *** 5532", "Low", "Resolved", 480,
+  ["DT-1026", "Power line", "Brgy. Tabing Ilog, Marilao", "Hana Lee", "0929 *** 5532", "Low", "Resolved", 480,
     "Sparking transformer reported by several neighbors, already isolated.", 1],
-  ["DT-1025", "Flood", "Concepcion Uno, Marikina", "Ivan Go", "0922 *** 1096", "Critical", "Verified", 20,
+  ["DT-1025", "Flood", "Brgy. Sumapang Matanda, Malolos", "Ivan Go", "0922 *** 1096", "Critical", "Verified", 20,
     "Water is waist-deep in the barangay hall area, about 40 residents stranded.", 3],
 ];
 

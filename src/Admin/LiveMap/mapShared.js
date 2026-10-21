@@ -6,7 +6,10 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-export const CENTER = [14.64, 121.08]; // Quezon City / Marikina area
+export const CENTER = [14.88, 120.93]; // middle of Bulacan province
+export const DEFAULT_ZOOM = 10; // whole province in view
+// Roughly the edges of Bulacan (a little loose). The map cannot be dragged far outside it.
+export const BULACAN_BOUNDS = [[14.6, 120.65], [15.35, 121.4]];
 export const OPEN_STATUSES = ["Pending", "Verified", "In Progress"];
 export const PRIORITY_RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 };
 export const PRIORITY_COLOR = { Critical: "#8f250c", High: "#c8641d", Medium: "#f2c14e", Low: "#5c6b7a" };
@@ -36,7 +39,14 @@ export const teamIcon = (status, stale) =>
 
 // Creates the OpenStreetMap map inside `element` with the layer groups both screens use.
 export function createMap(element, options = {}) {
-  const map = L.map(element, { center: CENTER, zoom: 12, ...options });
+  const map = L.map(element, {
+    center: CENTER,
+    zoom: DEFAULT_ZOOM,
+    minZoom: 9,
+    maxBounds: BULACAN_BOUNDS,
+    maxBoundsViscosity: 0.8,
+    ...options,
+  });
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',

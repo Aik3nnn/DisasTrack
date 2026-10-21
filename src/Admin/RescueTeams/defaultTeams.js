@@ -10,21 +10,21 @@
 ------------------------------------------------------------------- */
 
 const TEAMS = [
-  { code: "fire.alpha", name: "Fire Team Alpha", type: "Firefighters", base: "Quezon City Fire Station",
+  { code: "fire.alpha", name: "Fire Team Alpha", type: "Firefighters", base: "Malolos City Fire Station",
     people: ["Ramon Villanueva", "Joel Mendoza", "Carlo Reyes", "Dennis Cruz", "Mark Bautista"] },
-  { code: "fire.bravo", name: "Fire Team Bravo", type: "Firefighters", base: "Marikina Fire Station",
+  { code: "fire.bravo", name: "Fire Team Bravo", type: "Firefighters", base: "Meycauayan City Fire Station",
     people: ["Antonio Navarro", "Paolo Garcia", "Ryan Santos", "Jericho Lim", "Nathan Ramos"] },
-  { code: "police.alpha", name: "Police Team Alpha", type: "Police", base: "Quezon City Police Station",
+  { code: "police.alpha", name: "Police Team Alpha", type: "Police", base: "Malolos City Police Station",
     people: ["Eduardo Dizon", "Marco Aquino", "Lito Castillo", "Jun Mercado", "Rey Pascual"] },
-  { code: "police.bravo", name: "Police Team Bravo", type: "Police", base: "Marikina Police Station",
+  { code: "police.bravo", name: "Police Team Bravo", type: "Police", base: "Meycauayan City Police Station",
     people: ["Roberto Lopez", "Erwin Salazar", "Gilbert Torres", "Noel Fernandez", "Allan Domingo"] },
-  { code: "medical.alpha", name: "Medical Team Alpha", type: "Medical", base: "Quezon City Medical Post",
+  { code: "medical.alpha", name: "Medical Team Alpha", type: "Medical", base: "Malolos City Medical Post",
     people: ["Angela Rivera", "Maricel Tan", "Joanna Soriano", "Kristine Ocampo", "Patricia Flores"] },
-  { code: "medical.bravo", name: "Medical Team Bravo", type: "Medical", base: "Marikina Medical Post",
+  { code: "medical.bravo", name: "Medical Team Bravo", type: "Medical", base: "Meycauayan City Medical Post",
     people: ["Liza Castro", "Rhea Villar", "Camille Aguilar", "Janine Morales", "Bea Gutierrez"] },
-  { code: "road.alpha", name: "Road Team Alpha", type: "Road Officers", base: "Quezon City Traffic Office",
+  { code: "road.alpha", name: "Road Team Alpha", type: "Road Officers", base: "Malolos City Traffic Office",
     people: ["Felix Hernandez", "Oscar Valdez", "Nilo Cabrera", "Arman Delos Santos", "Teddy Ignacio"] },
-  { code: "road.bravo", name: "Road Team Bravo", type: "Road Officers", base: "Marikina Traffic Office",
+  { code: "road.bravo", name: "Road Team Bravo", type: "Road Officers", base: "Meycauayan City Traffic Office",
     people: ["Gerardo Manalo", "Benjie Alvarez", "Rolly Mariano", "Dante Enriquez", "Sonny Padilla"] },
 ];
 
