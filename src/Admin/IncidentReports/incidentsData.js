@@ -21,24 +21,43 @@ export const INCIDENT_TYPES = [
   "Other",
 ];
 
-// What the admin SEES for each saved status. The saved values in Firebase stay the same
-// (so the resident app and old records keep working): Verified = "Awaiting Assignment"
-// (verified, no team yet) and In Progress = "Team Assigned" (a team was dispatched).
-export const STATUS_LABEL = {
-  Verified: "Awaiting Assignment",
-  "In Progress": "Team Assigned",
-};
-export const statusLabel = (status) => STATUS_LABEL[status] || status;
+// All statuses are saved exactly as written here, in this order of the report's life:
+//   Pending -> Verified -> Awaiting Assignment -> Team Assigned -> In Progress -> Resolved -> Closed
+// Duplicate and Rejected are the two ways a report can leave that path early.
+//   Pending              = just submitted, waiting for an admin to check it
+//   Verified             = admin confirmed the report is real
+//   Awaiting Assignment  = verified and queued, no rescue team yet
+//   Team Assigned        = a team was dispatched (team id is saved on the report)
+//   In Progress          = the team is on site working on it
+//   Resolved             = the response is finished
+//   Closed               = resolved and signed off by an admin (final)
+//   Duplicate / Rejected = not acted on
+export const STATUSES = [
+  "Pending",
+  "Verified",
+  "Awaiting Assignment",
+  "Team Assigned",
+  "In Progress",
+  "Resolved",
+  "Duplicate",
+  "Rejected",
+  "Closed",
+];
+
+// Reports that still need work (shown on the map, counted as "active").
+export const OPEN_STATUSES = ["Pending", "Verified", "Awaiting Assignment", "Team Assigned", "In Progress"];
+// Reports a rescue team can be sent to.
+export const DISPATCHABLE_STATUSES = ["Verified", "Awaiting Assignment"];
+// Reports that have a team working on them right now.
+export const ACTIVE_TEAM_STATUSES = ["Team Assigned", "In Progress"];
+
+// Kept so every screen can keep calling statusLabel(); saved values are now the labels themselves.
+export const statusLabel = (status) => status;
 
 // Tabs above the table.
 export const TABS = [
   { key: "all", label: "All" },
-  { key: "Pending", label: "Pending" },
-  { key: "Verified", label: "Awaiting Assignment" },
-  { key: "In Progress", label: "Team Assigned" },
-  { key: "Resolved", label: "Resolved" },
-  { key: "Rejected", label: "Rejected" },
-  { key: "Duplicate", label: "Duplicate" },
+  ...STATUSES.map((s) => ({ key: s, label: s })),
 ];
 
 /** Reports already marked "Duplicate" of `id` (other residents who reported the same incident). */
@@ -146,7 +165,7 @@ const mk = (now) => ([
 const ROWS = [
   ["DT-1042", "Flood", "Brgy. Frances, Calumpit", "Juan Santos", "0917 *** 4521", "Critical", "Pending", 4,
     "Water level is rising fast along the main road. About 15 households are already affected, including children and elderly residents who need evacuation.", 3],
-  ["DT-1041", "Fire", "Brgy. Muzon, San Jose del Monte", "Maria Reyes", "0928 *** 1187", "Critical", "In Progress", 11,
+  ["DT-1041", "Fire", "Brgy. Muzon, San Jose del Monte", "Maria Reyes", "0928 *** 1187", "Critical", "Team Assigned", 11,
     "Fire is spreading from a two-storey house to the neighboring homes. Neighbors are using buckets while waiting for responders.", 2, "T-02"],
   ["DT-1040", "Landslide", "Brgy. Bitungol, Norzagaray", "Carlo Mendoza", "0915 *** 9032", "High", "Verified", 26,
     "Soil and rocks blocked the barangay road after heavy rain. Two houses near the slope are at risk of collapsing.", 4],
@@ -160,27 +179,27 @@ const ROWS = [
     "A resident collapsed inside a wet market. Neighbors are doing CPR while waiting for the ambulance.", 0, "T-05"],
   ["DT-1036", "Power line", "Brgy. Lolomboy, Bocaue", "Rosa Diaz", "0918 *** 4409", "Medium", "Pending", 95,
     "A live wire is hanging low across the street after strong winds. Residents are keeping children away.", 2],
-  ["DT-1035", "Earthquake", "Brgy. Longos, Malolos", "Pia Lim", "0921 *** 5571", "High", "Verified", 70,
+  ["DT-1035", "Earthquake", "Brgy. Longos, Malolos", "Pia Lim", "0921 *** 5571", "High", "Awaiting Assignment", 70,
     "Cracks appeared on the wall of a three-storey building after the tremor. Occupants moved outside.", 3],
   ["DT-1034", "Fire", "Brgy. Banga, Plaridel", "Mark Villanueva", "0933 *** 2210", "High", "Resolved", 190,
     "Small fire in a junk shop, already controlled by neighbors. Requesting inspection for hot spots.", 1, "T-02"],
   ["DT-1033", "Flood", "Brgy. San Sebastian, Hagonoy", "Joy Bautista", "0927 *** 7788", "Critical", "Resolved", 240,
     "Flooding reached the second floor of several houses. Families were waiting on rooftops.", 4, "T-01"],
-  ["DT-1032", "Landslide", "Brgy. Banaban, Angat", "Ramon Dizon", "0916 *** 1043", "High", "In Progress", 130,
+  ["DT-1032", "Landslide", "Brgy. Banaban, Angat", "Ramon Dizon", "0916 *** 1043", "High", "Team Assigned", 130,
     "Part of a hillside gave way and covered a footpath. Residents below are asking for assessment.", 2, "T-07"],
-  ["DT-1031", "Road hazard", "MacArthur Highway, Guiguinto", "Ella Ramos", "0935 *** 9921", "Medium", "Resolved", 300,
+  ["DT-1031", "Road hazard", "MacArthur Highway, Guiguinto", "Ella Ramos", "0935 *** 9921", "Medium", "Closed", 300,
     "Large sinkhole forming on the outer lane near the flyover.", 2],
   ["DT-1030", "Other", "Brgy. Poblacion, Pulilan", "Tess Cruz", "0912 *** 3307", "Low", "Rejected", 360,
     "Report did not include a valid location or details.", 0],
   ["DT-1029", "Flood", "Brgy. Poblacion, Paombong", "Paolo Reyes", "0917 *** 6015", "High", "Pending", 15,
     "Creek overflowed and water is entering ground-floor homes along the riverbank.", 2],
-  ["DT-1028", "Fire", "Brgy. Tarcan, Baliuag", "Dina Salvador", "0920 *** 8842", "Medium", "Verified", 45,
+  ["DT-1028", "Fire", "Brgy. Tarcan, Baliuag", "Dina Salvador", "0920 *** 8842", "Medium", "Awaiting Assignment", 45,
     "Smoke coming from a roadside food stall. Gas tank is nearby.", 1],
   ["DT-1027", "Medical emergency", "Brgy. Pulong Buhangin, Santa Maria", "Carl Uy", "0908 *** 2754", "Medium", "Resolved", 400,
     "Elderly resident with difficulty breathing after smoke exposure.", 0, "T-05"],
-  ["DT-1026", "Power line", "Brgy. Tabing Ilog, Marilao", "Hana Lee", "0929 *** 5532", "Low", "Resolved", 480,
+  ["DT-1026", "Power line", "Brgy. Tabing Ilog, Marilao", "Hana Lee", "0929 *** 5532", "Low", "Closed", 480,
     "Sparking transformer reported by several neighbors, already isolated.", 1],
-  ["DT-1025", "Flood", "Brgy. Sumapang Matanda, Malolos", "Ivan Go", "0922 *** 1096", "Critical", "Verified", 20,
+  ["DT-1025", "Flood", "Brgy. Sumapang Matanda, Malolos", "Ivan Go", "0922 *** 1096", "Critical", "Awaiting Assignment", 20,
     "Water is waist-deep in the barangay hall area, about 40 residents stranded.", 3],
 ];
 

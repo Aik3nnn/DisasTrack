@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useIncidents } from "./IncidentsContext.jsx";
-import { INCIDENT_TYPES, PRIORITIES, ago, duplicatesOf, formatCoords, statusLabel } from "./incidentsData.js";
+import {
+  ACTIVE_TEAM_STATUSES,
+  DISPATCHABLE_STATUSES,
+  INCIDENT_TYPES,
+  OPEN_STATUSES,
+  PRIORITIES,
+  ago,
+  duplicatesOf,
+  formatCoords,
+  statusLabel,
+} from "./incidentsData.js";
 import IncidentMap from "./IncidentMap.jsx";
 import { Badge, IconAlert, IconBack, IconCheck, IconImage } from "./incidentShared.jsx";
 import { useTeams } from "../js/useTeams.js";
@@ -53,7 +63,9 @@ export default function IncidentDetail() {
   }
 
   const { status } = incident;
-  const isOpen = ["Pending", "Verified", "In Progress"].includes(status);
+  const isOpen = OPEN_STATUSES.includes(status);
+  const canDispatch = DISPATCHABLE_STATUSES.includes(status);
+  const teamWorking = ACTIVE_TEAM_STATUSES.includes(status);
   const assignedTeam = teams.find((t) => t.id === incident.team);
   const chosenTeam = teams.find((t) => t.id === teamId);
   // Newest first. "at" is an ISO timestamp, so it sorts as text.
@@ -89,18 +101,21 @@ export default function IncidentDetail() {
     const value = event.target.value;
     run(() => update(id, { type: value }, `Classification changed to ${value}`));
   };
+  const queue = () => run(() => update(id, { status: "Awaiting Assignment" }, "Report queued for team assignment"));
   const dispatch = () =>
     run(async () => {
       // 1) the incident (status + team id)  2) the team (Deployed + which incident)
-      await update(id, { status: "In Progress", team: chosenTeam.id }, `${chosenTeam.name} dispatched`);
+      await update(id, { status: "Team Assigned", team: chosenTeam.id }, `${chosenTeam.name} dispatched`);
       await setTeamAssignment(chosenTeam.id, id);
       setTeamId(null);
     });
+  const startWork = () => run(() => update(id, { status: "In Progress" }, "Team started working on the incident"));
   const resolve = () =>
     run(async () => {
       await update(id, { status: "Resolved" }, "Marked as resolved");
       await releaseTeam();
     });
+  const close = () => run(() => update(id, { status: "Closed" }, "Report closed by Admin"));
   const reopen = () =>
     run(async () => {
       await update(id, { status: "Pending", team: null }, "Report reopened");
@@ -223,8 +238,20 @@ export default function IncidentDetail() {
                 </div>
               )}
 
-              {(status === "Verified" || status === "In Progress") && (
+              {["Verified", "Awaiting Assignment", "Team Assigned", "In Progress"].includes(status) && (
                 <p className="ir-note ir-note--ok"><IconCheck /> This report has been verified.</p>
+              )}
+
+              {status === "Verified" && (
+                <button type="button" className="ir-btn ir-btn--block" onClick={queue}>
+                  Mark as awaiting assignment
+                </button>
+              )}
+
+              {status === "Resolved" && (
+                <button type="button" className="ir-btn ir-btn--dark ir-btn--block" onClick={close}>
+                  Close report
+                </button>
               )}
 
               {!isOpen && (
@@ -275,30 +302,35 @@ export default function IncidentDetail() {
             <div className="ir-section">
               <h4 className="ir-section__title">Rescue team</h4>
 
-              {status === "In Progress" && assignedTeam && (
+              {teamWorking && assignedTeam && (
                 <>
                   <div className="ir-assigned">
                     <strong>{assignedTeam.name}</strong>
-                    <span>{assignedTeam.type} · on the way</span>
+                    <span>{assignedTeam.type} · {status === "In Progress" ? "working on site" : "on the way"}</span>
                   </div>
+                  {status === "Team Assigned" && (
+                    <button type="button" className="ir-btn ir-btn--primary ir-btn--block" onClick={startWork}>
+                      Start response (in progress)
+                    </button>
+                  )}
                   <button type="button" className="ir-btn ir-btn--dark ir-btn--block" onClick={resolve}>
                     Mark as resolved
                   </button>
                 </>
               )}
 
-              {status === "In Progress" && incident.team && !assignedTeam && (
+              {teamWorking && incident.team && !assignedTeam && (
                 <p className="ir-muted">Assigned to team {incident.team} (not found in Rescue Teams).</p>
               )}
 
-              {status === "Resolved" && assignedTeam && (
+              {(status === "Resolved" || status === "Closed") && assignedTeam && (
                 <div className="ir-assigned">
                   <strong>{assignedTeam.name}</strong>
                   <span>Completed this response</span>
                 </div>
               )}
 
-              {(status === "Pending" || status === "Verified") && (
+              {(status === "Pending" || canDispatch) && (
                 <>
                   {teams.length === 0 && (
                     <p className="ir-muted">No rescue teams yet. Add them on the Rescue Teams screen.</p>
@@ -329,7 +361,7 @@ export default function IncidentDetail() {
                   <button
                     type="button"
                     className="ir-btn ir-btn--primary ir-btn--block"
-                    disabled={status !== "Verified" || !chosenTeam}
+                    disabled={!canDispatch || !chosenTeam}
                     onClick={dispatch}
                   >
                     Dispatch team

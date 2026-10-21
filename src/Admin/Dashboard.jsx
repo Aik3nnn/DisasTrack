@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
 import { useIncidents } from "./IncidentReports/IncidentsContext.jsx";
-import { ago, minutesSince, statusLabel } from "./IncidentReports/incidentsData.js";
+import { OPEN_STATUSES, STATUSES, ago, minutesSince, statusLabel } from "./IncidentReports/incidentsData.js";
 import { useTeams } from "./js/useTeams.js";
 import {
   L,
@@ -27,9 +27,8 @@ import {
 ------------------------------------------------------------------- */
 
 const LIST_PATH = "/admin/incident-reports";
-const OPEN_STATUSES = ["Pending", "Verified", "In Progress"]; // still needs work
 const PRIORITY_RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 };
-const STATUS_FILTERS = ["Pending", "Verified", "In Progress", "Resolved", "Duplicate", "Rejected"];
+const STATUS_FILTERS = STATUSES;
 
 const LIVE_MAP_PATH = "/admin/live-map";
 

@@ -554,7 +554,10 @@
 .admin-badge--low { background: #e6e9ed; color: var(--blue-slate); }
 
 .admin-badge--pending { background: var(--tuscan-sun); color: var(--jet-black); }
+.admin-badge--awaiting-assignment { background: #f9e6d6; color: #b5560f; }
+.admin-badge--team-assigned { background: #e6e9ed; color: var(--blue-slate); border: 1px solid var(--blue-slate); }
 .admin-badge--in-progress { background: var(--jet-black); color: #fff; }
+.admin-badge--closed { background: #eeebe6; color: #5c6b7a; border: 1px solid var(--line); }
 .admin-badge--verified { background: #e6e9ed; color: #3e4955; }
 .admin-badge--resolved { background: #e8e8e9; color: #4a4f58; }
 .admin-badge--rejected { background: #f5e3de; color: #7a3a2a; }
@@ -979,7 +982,10 @@
 .ir-badge--low { background: var(--ir-slate-tint); color: var(--ir-slate); }
 .ir-badge--pending { background: var(--ir-sun); color: var(--ir-jet); }
 .ir-badge--verified { background: var(--ir-sun-tint); color: var(--ir-sun-dark); }
+.ir-badge--awaiting-assignment { background: var(--ir-rust-tint); color: var(--ir-rust); }
+.ir-badge--team-assigned { background: var(--ir-slate-tint); color: var(--ir-slate); box-shadow: inset 0 0 0 1px var(--ir-slate); }
 .ir-badge--in-progress { background: var(--ir-jet); color: var(--ir-snow); }
+.ir-badge--closed { background: var(--ir-mist); color: var(--ir-slate); box-shadow: inset 0 0 0 1px var(--ir-stone); }
 .ir-badge--resolved { background: #e9e9ea; color: var(--ir-jet); }
 .ir-badge--duplicate {
   background: var(--ir-snow);

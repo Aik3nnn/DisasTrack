@@ -9,7 +9,8 @@
    - createdAt  = ISO timestamp  (new Date().toISOString())
    - activity   = [{ text, at }]  where "at" is also an ISO timestamp
    - priority   = Critical | High | Medium | Low
-   - status     = Pending | Verified | In Progress | Resolved | Duplicate | Rejected
+   - status     = Pending | Verified | Awaiting Assignment | Team Assigned | In Progress |
+                  Resolved | Duplicate | Rejected | Closed
    (Optional extra: match = the duplicate-match percentage, set by duplicate detection.)
 
    Firebase does not store empty fields (null, undefined, empty lists), so a

@@ -5,13 +5,13 @@
 ------------------------------------------------------------------- */
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { statusLabel } from "../IncidentReports/incidentsData.js";
+import { OPEN_STATUSES, statusLabel } from "../IncidentReports/incidentsData.js";
 
 export const CENTER = [14.88, 120.93]; // middle of Bulacan province
 export const DEFAULT_ZOOM = 10; // whole province in view
 // Roughly the edges of Bulacan (a little loose). The map cannot be dragged far outside it.
 export const BULACAN_BOUNDS = [[14.6, 120.65], [15.35, 121.4]];
-export const OPEN_STATUSES = ["Pending", "Verified", "In Progress"];
+export { OPEN_STATUSES };
 export const PRIORITY_RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 };
 export const PRIORITY_COLOR = { Critical: "#8f250c", High: "#c8641d", Medium: "#f2c14e", Low: "#5c6b7a" };
 export const TEAM_COLOR = { Available: "#2f6b34", Standby: "#c98f0a", Deployed: "#2a2d34", "Off duty": "#9aa0a8" };

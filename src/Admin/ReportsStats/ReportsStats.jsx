@@ -13,7 +13,7 @@ import {
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import Icon from "../Icon.jsx";
-import { INCIDENT_TYPES, PRIORITIES, statusLabel } from "../IncidentReports/incidentsData.js";
+import { INCIDENT_TYPES, OPEN_STATUSES, PRIORITIES, STATUSES, statusLabel } from "../IncidentReports/incidentsData.js";
 import { useIncidents } from "../IncidentReports/IncidentsContext.jsx";
 import { useTeams } from "../js/useTeams.js";
 import { downloadCSV, formatDateTime } from "../js/adminHelpers.js";
@@ -41,7 +41,7 @@ const STONE = "#e4e0d9";
 
 const TYPE_COLORS = [BRANDY, SUN, JET, SLATE, "#c4673f", "#8a9aa8", "#d9a441", "#b8b2a7"];
 const PRIORITY_COLORS = { Critical: BRANDY, High: "#c4673f", Medium: SUN, Low: SLATE };
-const STATUS_LIST = ["Pending", "Verified", "In Progress", "Resolved", "Duplicate", "Rejected"];
+const STATUS_LIST = STATUSES;
 
 // Time filter. Compared against each incident's createdAt (ISO timestamp).
 //   days = how many days back the filter reaches (today = since midnight)
@@ -92,16 +92,16 @@ export default function ReportsStats() {
 
   // ----- summary numbers -----
   const total = incidents.length;
-  const resolved = incidents.filter((i) => i.status === "Resolved").length;
+  const resolved = incidents.filter((i) => i.status === "Resolved" || i.status === "Closed").length; // finished = resolved + closed
   const critical = incidents.filter((i) => i.priority === "Critical").length;
-  const active = incidents.filter((i) => ["Pending", "Verified", "In Progress"].includes(i.status)).length;
+  const active = incidents.filter((i) => OPEN_STATUSES.includes(i.status)).length;
   const resolveRate = total ? Math.round((resolved / total) * 100) : 0;
 
   const stats = [
     { label: "Total Reports", value: total, icon: "reports", tone: "slate", note: "In selected range" },
     { label: "Resolved", value: resolved, icon: "check", tone: "jet", note: `${resolveRate}% resolution rate` },
     { label: "Critical", value: critical, icon: "alert", tone: "brandy", note: "Highest priority" },
-    { label: "Still Active", value: active, icon: "clock", tone: "sun", note: "Pending, verified or in progress" },
+    { label: "Still Active", value: active, icon: "clock", tone: "sun", note: "Pending through in progress" },
   ];
 
   // ----- chart data -----
@@ -198,8 +198,8 @@ export default function ReportsStats() {
       name: team.name,
       specialty: team.type,
       assigned: mine.length,
-      inProgress: mine.filter((i) => i.status === "In Progress").length,
-      resolved: mine.filter((i) => i.status === "Resolved").length,
+      inProgress: mine.filter((i) => i.status === "Team Assigned" || i.status === "In Progress").length,
+      resolved: mine.filter((i) => i.status === "Resolved" || i.status === "Closed").length,
     };
   });
 
