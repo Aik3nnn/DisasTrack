@@ -13,10 +13,10 @@ import {
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import Icon from "../Icon.jsx";
-import { INCIDENT_TYPES, PRIORITIES, minutesSince } from "../IncidentReports/incidentsData.js";
+import { INCIDENT_TYPES, PRIORITIES } from "../IncidentReports/incidentsData.js";
 import { useIncidents } from "../IncidentReports/IncidentsContext.jsx";
 import { useTeams } from "../js/useTeams.js";
-import { downloadCSV } from "../js/adminHelpers.js";
+import { downloadCSV, formatDateTime } from "../js/adminHelpers.js";
 import "./ReportsStats.css";
 
 // Tell Chart.js which chart parts we use (required once).
@@ -44,11 +44,30 @@ const PRIORITY_COLORS = { Critical: BRANDY, High: "#c4673f", Medium: SUN, Low: S
 const STATUS_LIST = ["Pending", "Verified", "In Progress", "Resolved", "Duplicate", "Rejected"];
 
 // Time filter. Compared against each incident's createdAt (ISO timestamp).
+//   days = how many days back the filter reaches (today = since midnight)
+//   chartDays = how many days the "Reports over time" chart shows
 const RANGES = [
-  { key: "1h", label: "Last hour", minutes: 60 },
-  { key: "4h", label: "Last 4 hours", minutes: 240 },
-  { key: "all", label: "All reports", minutes: Infinity },
+  { key: "today", label: "Today", days: 0, chartDays: 7 },
+  { key: "7d", label: "Last 7 days", days: 7, chartDays: 7 },
+  { key: "30d", label: "Last 30 days", days: 30, chartDays: 30 },
+  { key: "all", label: "All reports", days: null, chartDays: 30 },
 ];
+
+// The earliest time an incident may have to be included (0 = no limit).
+function getStartTime(range) {
+  if (range.days === null) return 0;
+  const start = new Date();
+  start.setHours(0, 0, 0, 0); // midnight today
+  start.setDate(start.getDate() - range.days);
+  return start.getTime();
+}
+
+// Turns a date into text like "2026-10-21" so we can group reports by day.
+function dayKey(date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 
 // Counts how many items match each label: count(items, "type", ["Flood", "Fire"]) -> [3, 2]
 const countBy = (items, field, labels) =>
@@ -57,19 +76,19 @@ const countBy = (items, field, labels) =>
 export default function ReportsStats() {
   const [range, setRange] = useState("all");
   const [type, setType] = useState("all");
-  const { incidents: allIncidents } = useIncidents(); // same Firebase list as the Dashboard and Live Map
+  // Same Firebase list as the Dashboard and Live Map
+  const { incidents: allIncidents, loading, error } = useIncidents();
   const { teams } = useTeams();
 
-  const maxMinutes = RANGES.find((r) => r.key === range).minutes;
+  const selectedRange = RANGES.find((r) => r.key === range);
 
   // The incidents that match the filters above the charts.
-  const incidents = useMemo(
-    () =>
-      allIncidents.filter(
-        (i) => minutesSince(i.createdAt) <= maxMinutes && (type === "all" || i.type === type)
-      ),
-    [allIncidents, maxMinutes, type]
-  );
+  const incidents = useMemo(() => {
+    const startTime = getStartTime(selectedRange);
+    return allIncidents.filter(
+      (i) => new Date(i.createdAt).getTime() >= startTime && (type === "all" || i.type === type)
+    );
+  }, [allIncidents, selectedRange, type]);
 
   // ----- summary numbers -----
   const total = incidents.length;
@@ -126,23 +145,25 @@ export default function ReportsStats() {
     ],
   };
 
-  // 4) Reports per hour (line). Hour 0 = the last 60 minutes.
-  // NOTE: this chart only covers the last 8 hours. For longer ranges, change it to
-  // count reports per day instead.
-  const HOURS = 8;
-  const perHour = Array.from({ length: HOURS }, () => 0);
+  // 4) Reports per day (line). Shows the last 7 or 30 days, oldest on the left.
+  const dayLabels = [];
+  const perDay = {}; // example: { "2026-10-21": 3 }
+  for (let back = selectedRange.chartDays - 1; back >= 0; back--) {
+    const date = new Date();
+    date.setDate(date.getDate() - back);
+    dayLabels.push({ key: dayKey(date), text: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }) });
+    perDay[dayKey(date)] = 0;
+  }
   incidents.forEach((i) => {
-    const hour = Math.floor(minutesSince(i.createdAt) / 60);
-    if (hour < HOURS) perHour[hour] += 1;
+    const key = dayKey(new Date(i.createdAt));
+    if (key in perDay) perDay[key] += 1; // reports older than the chart are skipped
   });
-  const hourLabels = perHour.map((_, hour) => (hour === 0 ? "Now" : `${hour}h ago`));
   const trendData = {
-    // Oldest on the left, newest on the right
-    labels: [...hourLabels].reverse(),
+    labels: dayLabels.map((d) => d.text),
     datasets: [
       {
         label: "Reports",
-        data: [...perHour].reverse(),
+        data: dayLabels.map((d) => perDay[d.key]),
         borderColor: BRANDY,
         backgroundColor: "rgba(143, 37, 12, 0.12)",
         fill: true,
@@ -186,14 +207,14 @@ export default function ReportsStats() {
   function exportCSV() {
     downloadCSV(
       "disastrack-incident-summary.csv",
-      ["ID", "Type", "Location", "Priority", "Status", "Minutes ago", "Assigned team"],
+      ["ID", "Type", "Location", "Priority", "Status", "Date reported", "Assigned team"],
       incidents.map((i) => [
         i.id,
         i.type,
         i.location,
         i.priority,
         i.status,
-        minutesSince(i.createdAt),
+        formatDateTime(i.createdAt),
         teams.find((t) => t.id === i.team)?.name || "None",
       ])
     );
@@ -255,15 +276,27 @@ export default function ReportsStats() {
         ))}
       </section>
 
-      {total === 0 ? (
+      {loading ? (
         <section className="admin-card rs-card">
-          <p className="rs-empty">No reports match these filters.</p>
+          <p className="rs-empty">Loading reports…</p>
+        </section>
+      ) : error ? (
+        <section className="admin-card rs-card">
+          <p className="rs-empty" role="alert">{error.message}</p>
+        </section>
+      ) : total === 0 ? (
+        <section className="admin-card rs-card">
+          <p className="rs-empty">
+            {allIncidents.length === 0
+              ? "There are no reports yet. Reports will appear here once residents submit them."
+              : "No reports match these filters."}
+          </p>
         </section>
       ) : (
         <div className="rs-grid">
           <section className="admin-card rs-card rs-card--wide" aria-label="Reports over time">
             <h2 className="admin-card__title">Reports over time</h2>
-            <p className="admin-card__sub">Number of reports received each hour</p>
+            <p className="admin-card__sub">Number of reports received each day (last {selectedRange.chartDays} days)</p>
             <div className="rs-chart">
               <Line data={trendData} options={axisOptions} />
             </div>

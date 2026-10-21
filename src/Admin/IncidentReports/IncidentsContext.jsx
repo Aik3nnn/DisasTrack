@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { seedIncidents } from "./incidentsData.js";
+import { logAction } from "../Audit/auditLog.js";
 import { saveIncidents, updateIncident, watchIncidents } from "./incidentService.js";
 
 const IncidentsContext = createContext(null);
@@ -19,6 +20,24 @@ const IncidentsContext = createContext(null);
  *                              Returns a promise (it rejects with a readable message).
  *   loadSamples()           -> one-time: saves the sample incidents in Firebase.
  */
+// Decides what to write in the audit log for one incident change.
+// patch = the fields that were changed, log = the text of the change.
+function auditEntry(id, patch, log) {
+  let action = "Incident updated";
+  let category = "Incident";
+  if (patch.team) {
+    action = "Team assigned";
+    category = "Assignment";
+  } else if (patch.priority) {
+    action = "Priority changed";
+  } else if (patch.status) {
+    action = "Status changed";
+  } else if (patch.type) {
+    action = "Classification changed";
+  }
+  return { category, action, target: id, details: log };
+}
+
 export function IncidentsLayout() {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +56,11 @@ export function IncidentsLayout() {
       incidents,
       loading,
       error,
-      update: (id, patch, log) => updateIncident(id, patch, log),
+      update: async (id, patch, log) => {
+        await updateIncident(id, patch, log);
+        // Only logged after the change was saved. Logging never stops the screen.
+        logAction(auditEntry(id, patch, log || "Incident changed"));
+      },
       loadSamples: () => saveIncidents(seedIncidents()),
     }),
     [incidents, loading, error]
