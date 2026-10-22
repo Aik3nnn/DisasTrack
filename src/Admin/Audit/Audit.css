@@ -72,3 +72,12 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* phones: every filter takes a full row, pager buttons wrap under the text */
+@media (max-width: 560px) {
+  .au-filters { align-items: stretch; }
+  .au-filters label { width: 100%; }
+  .au-filters select,
+  .au-filters input[type="date"] { width: 100%; }
+  .au-pager { flex-wrap: wrap; padding: 12px 14px; }
+}

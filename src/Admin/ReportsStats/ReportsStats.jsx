@@ -184,11 +184,26 @@ export default function ReportsStats() {
     },
   };
 
+  // On a phone-sized screen the charts need a different layout to stay readable.
+  const isNarrow = window.innerWidth < 640;
+
+  // Status chart: nine bars with long names, so on a phone the bars lie sideways.
+  const statusOptions = isNarrow
+    ? {
+        ...axisOptions,
+        indexAxis: "y",
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: STONE } },
+          y: { grid: { display: false } },
+        },
+      }
+    : axisOptions;
+
   const doughnutOptions = {
     responsive: true,
     maintainAspectRatio: false,
     cutout: "62%",
-    plugins: { legend: { position: "right" } },
+    plugins: { legend: { position: isNarrow ? "bottom" : "right" } },
   };
 
   // ----- rescue team table -----
@@ -321,8 +336,8 @@ export default function ReportsStats() {
           <section className="admin-card rs-card rs-card--wide" aria-label="Reports by status">
             <h2 className="admin-card__title">Reports by status</h2>
             <p className="admin-card__sub">Where each report is in the response process</p>
-            <div className="rs-chart">
-              <Bar data={statusData} options={axisOptions} />
+            <div className="rs-chart" style={isNarrow ? { height: 340 } : undefined}>
+              <Bar data={statusData} options={statusOptions} />
             </div>
           </section>
 

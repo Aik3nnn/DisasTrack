@@ -34,7 +34,7 @@ Coverage: **Bulacan province only** (map, sample data and coordinate checks are 
 
 ## 2. How sign-in works
 People type a **username**. The app turns it into `username@disastrack.app` for Firebase Auth.
-The real email is only stored in the profile. Because of this, "Forgot password" cannot send an email;
+The real email is only stored in the profile. Because of this, the sign-in screen has no "Forgot password" link;
 an admin resets passwords in Authentication → Users → (⋮) → Reset password.
 
 ## 3. Database structure (shared by the team)
