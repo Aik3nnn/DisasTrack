@@ -127,6 +127,19 @@
         ".validate": "newData.val() === 'Admin' || newData.val() === 'Resident' || newData.val() === 'Disaster Management Officer' || newData.val() === 'Rescue Team'"
       }
     },
+    "notificationReads": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Admin')",
+        ".validate": "newData.hasChildren(['lastReadAt'])",
+        "lastReadAt": {
+          ".validate": "newData.isString() && newData.val().length <= 40"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
     "auditLogs": {
       ".read": "auth != null && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Admin' || root.child('userRoles').child(auth.uid).val() === 'Disaster Management Officer' || root.child('users').child(auth.uid).child('role').val() === 'Disaster Management Officer')",
       "$logId": {
