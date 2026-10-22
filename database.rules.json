@@ -184,7 +184,7 @@
         },
         "status": {
           ".write": "auth != null && newData.exists() && root.child('users').child('RescueTeamMembers').child(auth.uid).child('teamId').val() !== null && root.child('incidents').child($id).child('team').val() === root.child('users').child('RescueTeamMembers').child(auth.uid).child('teamId').val()",
-          ".validate": "newData.val() === 'Pending' || newData.val() === 'Verified' || newData.val() === 'In Progress' || newData.val() === 'Resolved' || newData.val() === 'Duplicate' || newData.val() === 'Rejected'"
+          ".validate": "newData.val() === 'Pending' || newData.val() === 'Verified' || newData.val() === 'Awaiting Assignment' || newData.val() === 'Team Assigned' || newData.val() === 'In Progress' || newData.val() === 'Resolved' || newData.val() === 'Duplicate' || newData.val() === 'Rejected' || newData.val() === 'Closed'"
         },
         "photos": {
           ".validate": "newData.isNumber()"
