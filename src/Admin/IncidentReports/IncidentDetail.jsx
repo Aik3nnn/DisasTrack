@@ -190,7 +190,7 @@ export default function IncidentDetail() {
               <span className="ir-muted">GPS {coords}</span>
             </div>
             <div className="ir-card__body">
-              <IncidentMap incident={incident} teams={teams} />
+              <IncidentMap incident={incident} />
             </div>
           </section>
         </div>

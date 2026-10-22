@@ -6,15 +6,12 @@ import { OPEN_STATUSES, STATUSES, ago, minutesSince, statusLabel } from "./Incid
 import { useTeams } from "./js/useTeams.js";
 import {
   L,
-  PRIORITY_COLOR,
-  TEAM_COLOR,
   createMap,
-  drawDispatchLines,
   hasPoint,
   incidentMarker,
   syncMarkers,
-  teamMarker,
 } from "./LiveMap/mapShared.js";
+import MapLegend from "./LiveMap/MapLegend.jsx";
 
 /* ------------------------------------------------------------------
    Everything on this screen is calculated from live data:
@@ -80,15 +77,8 @@ export default function Dashboard() {
   const mapEl = useRef(null);
   const layers = useRef(null);
   const fitted = useRef(false);
-  const [now, setNow] = useState(Date.now());
 
-  // Re-check "live / last seen" for team markers.
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(id);
-  }, []);
-
-  // What the chips show: All = open incidents + rescue teams, Critical / Pending = only those incidents.
+  // What the chips show: All = open incidents, Critical / Pending = only those incidents.
   const mapIncidents = useMemo(
     () =>
       open.filter(
@@ -99,10 +89,6 @@ export default function Dashboard() {
             (filter === "pending" && i.status === "Pending"))
       ),
     [open, filter]
-  );
-  const mapTeams = useMemo(
-    () => (filter === "all" ? teams.filter((t) => hasPoint(t.location)) : []),
-    [teams, filter]
   );
 
   useEffect(() => {
@@ -125,13 +111,6 @@ export default function Dashboard() {
       fitted.current = true;
     }
   }, [mapIncidents, navigate]);
-
-  useEffect(() => {
-    const l = layers.current;
-    if (!l) return;
-    syncMarkers(l.teams, l.teamMarkers, mapTeams.map((t) => teamMarker(t, now, navigate)));
-    drawDispatchLines(l.lines, mapTeams, incidents);
-  }, [mapTeams, incidents, now, navigate]);
 
   // Priority queue: open incidents, most urgent first, newest first within a priority.
   const queue = useMemo(
@@ -208,12 +187,7 @@ export default function Dashboard() {
             aria-label="Map of reported incidents"
           />
 
-          <ul className="admin-legend">
-            {["Critical", "High", "Medium", "Low"].map((p) => (
-              <li key={p}><span className="lm-key lm-key--dot" style={{ "--c": PRIORITY_COLOR[p] }} />{p}</li>
-            ))}
-            <li><span className="lm-key lm-key--team" style={{ "--c": TEAM_COLOR.Available }} />Rescue team</li>
-          </ul>
+          <MapLegend />
         </section>
 
         <section className="admin-card" aria-labelledby="queue-title">
