@@ -2068,3 +2068,203 @@
   border-bottom: 2px solid var(--ir-stone);
   border-bottom-left-radius: 8px;
 }
+/* =====================================================================
+   Notifications (bell, list and pop-ups). Every class here starts with "nt-".
+   ===================================================================== */
+.nt-wrap {
+  position: relative;
+}
+
+.nt-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--brandy);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.nt-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(42, 45, 52, 0.16);
+  overflow: hidden;
+}
+
+.nt-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.nt-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--brandy);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nt-link:hover:not(:disabled) { text-decoration: underline; }
+.nt-link:disabled { color: var(--muted); cursor: default; }
+
+.nt-empty {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.nt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(70vh, 460px);
+  overflow-y: auto;
+}
+
+.nt-list li + li { border-top: 1px solid var(--line); }
+
+.nt-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  background: #fff;
+  text-align: left;
+  color: inherit;
+}
+
+.nt-item:hover,
+.nt-item:focus-visible { background: #f3f0ea; }
+.nt-item.is-unread { background: #fdf4dc; }
+.nt-item.is-unread:hover,
+.nt-item.is-unread:focus-visible { background: #faeac0; }
+
+.nt-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f5e4de;
+  color: var(--brandy);
+}
+
+.nt-item--user .nt-icon,
+.nt-toast--user .nt-icon { background: #e8ecf0; color: var(--blue-slate); }
+.nt-item--team .nt-icon,
+.nt-toast--team .nt-icon { background: #fdf4dc; color: #7a5b0c; }
+
+.nt-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.nt-title { font-weight: 600; }
+.nt-sub { color: var(--jet-black); overflow-wrap: anywhere; }
+.nt-meta { font-size: 12px; color: var(--muted); }
+
+.nt-unread {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--brandy);
+}
+
+/* pop-ups for things that arrive while the page is open */
+.nt-toasts {
+  position: fixed;
+  top: 76px;
+  right: 20px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+
+.nt-toast {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--brandy);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(42, 45, 52, 0.18);
+  pointer-events: auto;
+  animation: nt-in 0.2s ease-out;
+}
+
+.nt-toast--user { border-left-color: var(--blue-slate); }
+.nt-toast--team { border-left-color: var(--tuscan-sun); }
+
+.nt-toast__body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 10px 6px 10px 12px;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
+}
+
+.nt-toast__close {
+  flex: none;
+  align-self: flex-start;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+}
+
+.nt-toast__close:hover { background: #f3f0ea; }
+
+@keyframes nt-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-toast { animation: none; }
+}
+
+@media (max-width: 860px) {
+  .nt-toasts { top: 68px; right: 16px; }
+}

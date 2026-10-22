@@ -24,6 +24,8 @@ Coverage: **Bulacan province only** (map, sample data and coordinate checks are 
    This first admin sits directly at `/users/{uid}` (a "legacy" account). The rules accept it
    through its `role` field. After signing in, click **Move into role folders** on the Users screen.
 4. **Realtime Database → Rules.** Paste the contents of `database.rules.json`, then **Publish**.
+   If your rules were published before the notification bell was added, also add the
+   `notificationReads` block from `database.rules.notifications.json` (see section 8), then **Publish** again.
 5. **First-time data (once):**
    - Rescue Teams → **Set up default teams** (creates `T-01` to `T-08` and their member accounts).
    - Incident Reports → **Load sample incidents** (19 Bulacan samples).
@@ -48,6 +50,7 @@ an admin resets passwords in Authentication → Users → (⋮) → Reset passwo
 /userRoles/{uid}    "Admin" | "Resident" | "Disaster Management Officer" | "Rescue Team"
                     (lookup: gives a person's role from their uid, so the app knows which folder to read)
 /auditLogs/{id}     timestamp, actor, actorId, role, category, action, target, details
+/notificationReads/{uid}   lastReadAt (ISO)   where this admin last read the notification bell
 /incidents/{id}     id ("DT-1042"), type, location, reporter, reporterId, phone, priority, status,
                     description, photos, lat, lng, team ("T-01"), duplicateOf, match, createdAt,
                     activity[] = { text, at }
@@ -94,6 +97,7 @@ Notes:
 | `/auditLogs` | read; write own entries | read; write own entries | write own entries | write own entries |
 | `/incidents` | read + write all | read + write all | read all; update `status` and `activity` of incidents assigned to their team | create (as `Pending`); read own (needs `reporterId`) |
 | `/rescueTeams` | read + write all | read + write all | read all; write own team's `location` and `status` | – |
+| `/notificationReads/{uid}` | read + write own marker only | – | – | – |
 
 Other rules worth knowing:
 - Audit entries can only be created (never edited or deleted), and `actorId` must be the writer's own uid.
@@ -102,6 +106,8 @@ Other rules worth knowing:
 - Values are checked: priority, status and role must be from the lists above, and text fields have length limits.
   If you add a new status, add it to the `status` `.validate` line in `database.rules.json` and publish the rules,
   otherwise saving fails with `permission_denied`.
+- `/notificationReads/{uid}` can only be read or written by that same admin, and only holds `lastReadAt`
+  (a text timestamp). Nobody else, including other admins, can touch it.
 - `lat`/`lng` must be inside a box around Bulacan (lat 14.6 to 15.35, lng 120.65 to 121.4).
   To allow anywhere, remove the `LAT` / `LNG` `.validate` lines in the rules.
 
@@ -132,3 +138,40 @@ Incidents and teams already have helpers, so use these instead of writing your o
 - **Rescue team app, statuses:** an incident assigned to the team arrives as `Team Assigned`. When the team
   arrives, set `status: "In Progress"`; when finished, set `status: "Resolved"`. Add a line to `activity[]`
   (`{ text, at }`) for each change. Only the team named in the incident's `team` field can write these.
+
+## 8. Notifications (the bell in the admin top bar)
+The bell tells an admin when something new was added:
+
+| Notification | Triggered by | Opens |
+|---|---|---|
+| New incident report | a new record in `/incidents` (admin form or the resident app) | that report |
+| New user created | a new account in `/users/...` | Users screen |
+| New rescue team created | a new record in `/rescueTeams` | Rescue Teams screen |
+
+How it works:
+- **Nothing is copied into a notifications list.** The bell is built live from `createdAt` on the three
+  places above, so reports sent by the resident app while no admin is signed in are still caught.
+  This means every new record **must have an ISO `createdAt`** (the resident app already does this for incidents).
+- Each admin has their own read marker at `/notificationReads/{uid}/lastReadAt`. Anything created after it is
+  unread. **Mark all as read** moves the marker to "now". One admin reading does not clear it for others.
+- A pop-up (toast) also appears when something arrives while the page is open. If several arrive at once
+  (for example **Load sample incidents** or **Set up default teams**), you get one summary pop-up per kind.
+- The first time an admin signs in, everything already in the database counts as read.
+- If the rules block below is not published yet, the bell still works for this session (live arrivals only),
+  but the "read" state is not remembered after a refresh.
+- The list shows the 30 newest items. Code lives in `Admin/Notifications/`.
+
+Rules block. It is already merged into `database.rules.json` (between `userRoles` and `auditLogs`).
+The same block is also saved alone as `database.rules.notifications.json`:
+```json
+"notificationReads": {
+  "$uid": {
+    ".read": "auth != null && auth.uid === $uid",
+    ".write": "auth != null && auth.uid === $uid && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Admin')",
+    ".validate": "newData.hasChildren(['lastReadAt'])",
+    "lastReadAt": { ".validate": "newData.isString() && newData.val().length <= 40" },
+    "$other": { ".validate": false }
+  }
+}
+```
+The write check accepts an admin through `/userRoles` or the old `role` field, the same way the other rules do.

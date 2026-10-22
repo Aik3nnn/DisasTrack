@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import Icon from "./Icon.jsx";
+import NotificationBell from "./Notifications/NotificationBell.jsx";
 import logo from "../assets/disastrack-icon.png";
 
 // Sidebar items = the admin screens. "hidden" ones are reached another way
@@ -106,10 +107,7 @@ export default function AdminLayout({ user, onLogout }) {
           </div>
 
           <div className="admin-topbar__actions">
-            <button type="button" className="admin-iconbtn" aria-label="Notifications">
-              <Icon name="bell" />
-              <span className="admin-iconbtn__dot" />
-            </button>
+            <NotificationBell uid={user?.uid} />
           </div>
         </header>
 
