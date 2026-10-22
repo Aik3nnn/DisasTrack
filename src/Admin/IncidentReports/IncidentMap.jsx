@@ -1,40 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { ago } from "./incidentsData.js";
-import {
-  L,
-  createMap,
-  drawDispatchLines,
-  hasPoint,
-  incidentMarker,
-  syncMarkers,
-  teamMarker,
-} from "../LiveMap/mapShared.js";
+import { createMap, hasPoint, incidentMarker, syncMarkers } from "../LiveMap/mapShared.js";
 
 /* ------------------------------------------------------------------
-   Live map for ONE incident (Incident Detail page).
-   Same OpenStreetMap / Leaflet map as the Live Map screen:
-   - the incident pin
-   - the rescue team assigned to it (moves by itself when the team's location
-     changes in Firebase) and a dashed line between them
-   - the "last seen" check runs again every 30 seconds
+   Map for ONE incident (Incident Detail page).
+   Same OpenStreetMap / Leaflet map as the Live Map screen, showing the incident pin.
 ------------------------------------------------------------------- */
-export default function IncidentMap({ incident, teams }) {
-  const navigate = useNavigate();
+export default function IncidentMap({ incident }) {
   const mapEl = useRef(null);
   const layers = useRef(null);
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(id);
-  }, []);
-
   const located = hasPoint(incident);
-  const assigned = useMemo(
-    () => teams.filter((t) => t.id === incident.team && hasPoint(t.location)),
-    [teams, incident.team]
-  );
 
   // 1. create the map once (cleaned up when leaving the page)
   useEffect(() => {
@@ -50,21 +25,13 @@ export default function IncidentMap({ incident, teams }) {
     };
   }, []);
 
-  // 2. incident pin + team + line; zoom to fit them
+  // 2. incident pin; zoom to it
   useEffect(() => {
     const l = layers.current;
     if (!l) return;
     syncMarkers(l.incidents, l.incidentMarkers, located ? [incidentMarker(incident, () => {}, ago)] : []);
-    syncMarkers(l.teams, l.teamMarkers, assigned.map((t) => teamMarker(t, now, navigate)));
-    drawDispatchLines(l.lines, assigned, located ? [incident] : []);
-
-    const points = [
-      ...(located ? [[incident.lat, incident.lng]] : []),
-      ...assigned.map((t) => [t.location.lat, t.location.lng]),
-    ];
-    if (points.length === 1) l.map.setView(points[0], 15);
-    else if (points.length > 1) l.map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 15 });
-  }, [incident, located, assigned, now, navigate]);
+    if (located) l.map.setView([incident.lat, incident.lng], 15);
+  }, [incident, located]);
 
   return (
     <>
