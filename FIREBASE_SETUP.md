@@ -52,13 +52,40 @@ an admin resets passwords in Authentication → Users → (⋮) → Reset passwo
                     description, photos, lat, lng, team ("T-01"), duplicateOf, match, createdAt,
                     activity[] = { text, at }
                     priority = Critical | High | Medium | Low
-                    status   = Pending | Verified | In Progress | Resolved | Duplicate | Rejected
+                    status   = Pending | Verified | Awaiting Assignment | Team Assigned | In Progress |
+                               Resolved | Duplicate | Rejected | Closed   (see "Incident statuses" below)
 /rescueTeams/{id}   name, type, leader, phone, base, status, assignment, createdAt,
                     location = { lat, lng, updatedAt }   (written by the team's phone)
                     status = Available | Standby | Deployed | Off duty
 ```
 Timestamps are ISO strings (`new Date().toISOString()`), except `location.updatedAt`, which is a number
 (`Date.now()`). Firebase does not store empty fields, so a missing `team` or `duplicateOf` means "none".
+
+### Incident statuses
+Statuses are saved exactly as written (no hidden renaming). A report normally moves through this path:
+
+`Pending` → `Verified` → `Awaiting Assignment` → `Team Assigned` → `In Progress` → `Resolved` → `Closed`
+
+`Duplicate` and `Rejected` are the two ways a report can leave that path without being acted on.
+
+| Status | Meaning | Who sets it |
+|---|---|---|
+| Pending | Just submitted, waiting for an admin to check it | Resident app (on create) |
+| Verified | Admin confirmed the report is real | Admin |
+| Awaiting Assignment | Verified and queued, no rescue team yet | Admin |
+| Team Assigned | A team was dispatched (`team` is set on the incident) | Admin (Dispatch) |
+| In Progress | The team is on site working on it | Admin or the assigned rescue team |
+| Resolved | The response is finished (the team is set back to Available) | Admin or the assigned rescue team |
+| Closed | Resolved and signed off (final) | Admin |
+| Duplicate | Same incident as another report (`duplicateOf`) | Admin |
+| Rejected | Not a valid report | Admin |
+
+Notes:
+- A team can only be dispatched from `Verified` or `Awaiting Assignment`.
+- "Active" (map, dashboard, stats) means `Pending`, `Verified`, `Awaiting Assignment`, `Team Assigned` or `In Progress`.
+- Admins can reopen a `Resolved`, `Closed`, `Rejected` or `Duplicate` report.
+- Older records are not converted. Before this change, `Verified` was shown as "Awaiting Assignment" and
+  `In Progress` was shown as "Team Assigned". Old `Verified` / `In Progress` records now show under their own names.
 
 ## 4. Who can do what (summary of `database.rules.json`)
 | Data | Admin | Disaster Mgmt Officer | Rescue Team | Resident |
@@ -73,6 +100,8 @@ Other rules worth knowing:
 - A user can only edit their own profile fields (name, email, phone, office, photo, lastLogin), and only
   in the folder that matches their role in `/userRoles`.
 - Values are checked: priority, status and role must be from the lists above, and text fields have length limits.
+  If you add a new status, add it to the `status` `.validate` line in `database.rules.json` and publish the rules,
+  otherwise saving fails with `permission_denied`.
 - `lat`/`lng` must be inside a box around Bulacan (lat 14.6 to 15.35, lng 120.65 to 121.4).
   To allow anywhere, remove the `LAT` / `LNG` `.validate` lines in the rules.
 
@@ -100,3 +129,6 @@ Incidents and teams already have helpers, so use these instead of writing your o
 - **Rescue team app:** the member's profile needs a `teamId` (set automatically when an admin adds
   them on the Users screen). Without it, their location and status writes are rejected.
   Write the position to `/rescueTeams/{teamId}/location` as `{ lat, lng, updatedAt: Date.now() }`.
+- **Rescue team app, statuses:** an incident assigned to the team arrives as `Team Assigned`. When the team
+  arrives, set `status: "In Progress"`; when finished, set `status: "Resolved"`. Add a line to `activity[]`
+  (`{ text, at }`) for each change. Only the team named in the incident's `team` field can write these.
