@@ -157,9 +157,6 @@ function Login({ onLogin }) {
               />
               <span>Remember me</span>
             </label>
-            <a className="login-form__link" href="/forgot-password">
-              Forgot password?
-            </a>
           </div>
 
           <p className="login-form__error" role="alert" aria-live="polite">

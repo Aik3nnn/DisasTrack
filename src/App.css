@@ -214,7 +214,6 @@ body {
 }
 
 .field__toggle:focus-visible,
-.login-form__link:focus-visible,
 .check input:focus-visible,
 .login-form__submit:focus-visible {
   outline: 3px solid var(--tuscan-sun);
@@ -242,16 +241,6 @@ body {
   width: 16px;
   height: 16px;
   accent-color: var(--brandy);
-}
-
-.login-form__link {
-  font-weight: 600;
-  color: var(--brandy);
-  text-decoration: none;
-}
-
-.login-form__link:hover {
-  text-decoration: underline;
 }
 
 .login-form__error {

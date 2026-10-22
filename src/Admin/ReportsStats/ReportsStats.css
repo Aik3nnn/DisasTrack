@@ -71,3 +71,10 @@
 @media (max-width: 860px) {
   .rs-grid { grid-template-columns: 1fr; }
 }
+
+/* phones: less padding, filters use the full width */
+@media (max-width: 560px) {
+  .rs-card { padding: 14px; }
+  .rs-filters { align-items: stretch; }
+  .rs-select { width: 100%; }
+}
