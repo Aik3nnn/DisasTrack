@@ -1,0 +1,121 @@
+/* ------------------------------------------------------------------
+   Disaster Management Officer screens.
+   The shell, cards, stat cards, badges and tables all come from
+   Admin/Admin.css, so only the few new pieces live here.
+------------------------------------------------------------------- */
+
+.of-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .of-grid-2 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* horizontal bar list: label, bar, number */
+.of-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.of-bars__row {
+  display: grid;
+  grid-template-columns: minmax(96px, 140px) minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.of-bars__label { font-weight: 500; color: var(--jet-black); }
+
+.of-bars__track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eeebe6;
+}
+
+.of-bars__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+.of-bars__count {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.of-note {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* reports per day (last 7 days) */
+.of-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  height: 190px;
+}
+
+.of-week__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.of-week__val {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.of-week__plot {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+}
+
+.of-week__bar {
+  display: block;
+  width: 100%;
+  max-width: 38px;
+  min-height: 4px;
+  border-radius: 6px 6px 2px 2px;
+  background: #e4e0d9;
+  transition: height 0.3s ease;
+}
+
+.of-week__bar.is-peak { background: var(--brandy); }
+
+.of-week__label {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .of-bars__fill,
+  .of-week__bar { transition: none; }
+}
+
+@media (max-width: 520px) {
+  .of-bars__row { grid-template-columns: minmax(84px, 110px) minmax(0, 1fr) 30px; gap: 8px; }
+  .of-week { gap: 6px; }
+}

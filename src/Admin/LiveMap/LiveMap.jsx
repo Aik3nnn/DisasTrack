@@ -27,7 +27,7 @@ import MapLegend, { TypeKey } from "./MapLegend.jsx";
 
 const PRIORITIES = ["Critical", "High", "Medium", "Low"];
 
-export default function LiveMap() {
+export default function LiveMap({ listPath, reviewable = true }) {
   const navigate = useNavigate();
   const { incidents } = useIncidents();
 
@@ -72,7 +72,7 @@ export default function LiveMap() {
     syncMarkers(
       l.incidents,
       l.incidentMarkers,
-      shown.map((i) => incidentMarker(i, navigate, ago))
+      shown.map((i) => incidentMarker(i, navigate, ago, { listPath, reviewable }))
     );
 
     // Zoom to the incidents the first time some are shown.
@@ -80,7 +80,7 @@ export default function LiveMap() {
       l.map.fitBounds(L.latLngBounds(shown.map((i) => [i.lat, i.lng])), { padding: [40, 40], maxZoom: 14 });
       fitted.current = true;
     }
-  }, [shown, navigate]);
+  }, [shown, navigate, listPath, reviewable]);
 
   function focusIncident(i) {
     const l = layers.current;

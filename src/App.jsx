@@ -19,6 +19,8 @@ import ReportsStats from "./Admin/ReportsStats/ReportsStats.jsx";
 import Audit from "./Admin/Audit/Audit.jsx";
 import { setAuditActor } from "./Admin/Audit/auditLog.js";
 import Profile from "./Admin/Profile/Profile.jsx";
+import OfficerLayout from "./Officer/OfficerLayout.jsx";
+import OfficerOverview from "./Officer/Overview.jsx";
 import LoadingScreen from "./LoadingScreen.jsx";
 
 function UserIcon() {
@@ -243,6 +245,22 @@ export default function App() {
           <Route path="reports" element={<ReportsStats />} />
           <Route path="audit" element={<Audit />} />
           <Route path="profile" element={<Profile user={user} onUpdate={handleUpdateUser} />} />
+        </Route>
+
+        {/* Disaster Management Officer screens: same shell and design as the admin console. */}
+        <Route
+          path="/officer"
+          element={
+            user ? <OfficerLayout user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />
+          }
+        >
+          <Route index element={<OfficerOverview />} />
+          <Route path="incident-reports" element={<ComingSoon title="Incident Reports" />} />
+          <Route path="operations" element={<ComingSoon title="Operations Monitor" />} />
+          <Route path="trends" element={<ComingSoon title="Incident Trends" />} />
+          <Route path="reports" element={<ComingSoon title="Reports & Stats" />} />
+          <Route path="live-map" element={<LiveMap reviewable={false} />} />
+          <Route path="profile" element={<ComingSoon title="Profile" />} />
         </Route>
       </Route>
 

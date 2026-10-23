@@ -121,7 +121,10 @@ export function syncMarkers(group, store, items) {
 }
 
 // The popup + icon for one incident (same on both maps).
-export function incidentMarker(i, navigate, ago) {
+// options.listPath   -> where "Review report" goes (admin list by default)
+// options.reviewable -> false hides the button (screens that only view incidents)
+export function incidentMarker(i, navigate, ago, options = {}) {
+  const { listPath = LIST_PATH, reviewable = true } = options;
   return {
     key: i.id,
     latlng: [i.lat, i.lng],
@@ -129,7 +132,7 @@ export function incidentMarker(i, navigate, ago) {
     popup: popupEl(
       `${i.id} · ${i.type}`,
       [`${i.priority} priority · ${statusLabel(i.status)}`, i.location, `${i.reporter} · ${ago(i.createdAt)}`],
-      { label: "Review report", onClick: () => navigate(`${LIST_PATH}/${i.id}`) }
+      reviewable ? { label: "Review report", onClick: () => navigate(`${listPath}/${i.id}`) } : null
     ),
   };
 }
