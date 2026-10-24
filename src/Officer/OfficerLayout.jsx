@@ -11,6 +11,7 @@ const NAV = [
   { to: "/officer/incident-reports", label: "Incident Reports", icon: "reports", sub: "Review reported incidents and where they stand" },
   { to: "/officer/operations", label: "Operations Monitor", icon: "dispatch", sub: "Monitor rescue operations and team activity" },
   { to: "/officer/trends", label: "Incident Trends", icon: "stats", sub: "How incidents change over time, by type and by place" },
+  { to: "/officer/outcomes", label: "Response Outcomes", icon: "check", sub: "How rescue operations ended and how many people were rescued" },
   { to: "/officer/reports", label: "Reports & Stats", icon: "audit", sub: "Overall statistics and downloadable reports" },
   { to: "/officer/live-map", label: "Live Map", icon: "map", sub: "Real-time view of incidents and rescue teams" },
   { to: "/officer/profile", label: "Profile", icon: "profile", hidden: true, sub: "Your account details and password" },
@@ -77,7 +78,7 @@ export default function OfficerLayout({ user, onLogout }) {
             </span>
             <span>
               <span className="admin-usercard__name">{name}</span>
-              <span className="admin-usercard__role">Disaster Management Officer</span>
+              <span className="admin-usercard__role">DM Officer</span>
             </span>
           </NavLink>
           <button type="button" className="admin-usercard__logout" onClick={onLogout} aria-label="Log out">

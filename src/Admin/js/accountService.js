@@ -66,22 +66,35 @@ export function friendlyMessage(err) {
 
 // ---------- sign in / out ----------
 
-// Loads the signed-in person's profile and checks that they may use the admin console.
+// Only these two roles may use the web console.
+//   Admin                       -> /admin
+//   Disaster Management Officer -> /officer
+export const CONSOLE_ROLES = ["Admin", "Disaster Management Officer"];
+
+// Where each role lands after signing in.
+export function homePathForRole(role) {
+  return role === "Disaster Management Officer" ? "/officer" : "/admin";
+}
+
+// Loads the signed-in person's profile and checks that they may use the web console.
+// (The name says "Admin" for historical reasons; it now accepts officers too.)
 export async function loadAdminProfile(uid) {
   // 1. Ask the lookup which role this person has.
   const role = (await get(ref(db, `userRoles/${uid}`))).val();
 
-  // 2. Load the profile: the Admins folder first, then the old flat place.
+  // 2. Load the profile from the folder of that role (no role = old admin account).
   let profile = null;
-  if (!role || role === "Admin") {
-    profile = (await get(ref(db, `users/Admins/${uid}`))).val();
-    if (!profile) profile = (await get(ref(db, `users/${uid}`))).val();
+  if (!role || CONSOLE_ROLES.includes(role)) {
+    const folder = ROLE_FOLDERS[role || "Admin"];
+    profile = (await get(ref(db, `users/${folder}/${uid}`))).val();
+    // Old admin accounts may still be saved in the flat place /users/{uid}.
+    if (!profile && !role) profile = (await get(ref(db, `users/${uid}`))).val();
   }
 
   let problem = "";
-  if (role && role !== "Admin") problem = "This account does not have access to the admin console.";
+  if (role && !CONSOLE_ROLES.includes(role)) problem = "This account does not have access to the web console.";
   else if (!profile) problem = "No profile was found for this account. Ask an administrator to set it up.";
-  else if (profile.role !== "Admin") problem = "This account does not have access to the admin console.";
+  else if (!CONSOLE_ROLES.includes(profile.role)) problem = "This account does not have access to the web console.";
   else if (profile.status === "Suspended") problem = "This account has been suspended.";
 
   if (problem) {
@@ -99,13 +112,14 @@ export async function signInAdmin(username, password, remember) {
     const admin = await loadAdminProfile(result.user.uid);
     await updateOwnProfile(admin.uid, { lastLogin: new Date().toISOString() });
     // Record the sign-in (the actor is passed here because App.jsx has not stored it yet).
+    const isOfficer = admin.role === "Disaster Management Officer";
     logAction({
       actor: admin.name,
       actorId: admin.uid,
-      role: "Administrator",
+      role: isOfficer ? admin.role : "Administrator",
       category: "Login",
       action: "Signed in",
-      target: "Admin console",
+      target: isOfficer ? "Officer console" : "Admin console",
       details: "Successful sign-in",
     });
     return admin;
@@ -191,11 +205,13 @@ export async function updateAccount(account, values) {
 }
 
 // The signed-in person edits their OWN profile (name, phone, photo, ...).
-// Finds the right place: the Admins folder, or the old flat place if not moved yet.
+// Finds the right place: the folder of the person's role, or the old flat place if not moved yet.
 export async function updateOwnProfile(uid, values) {
   try {
-    const inFolder = (await get(ref(db, `users/Admins/${uid}`))).exists();
-    await update(ref(db, inFolder ? `users/Admins/${uid}` : `users/${uid}`), values);
+    const role = (await get(ref(db, `userRoles/${uid}`))).val();
+    const folder = ROLE_FOLDERS[role || "Admin"];
+    const inFolder = folder && (await get(ref(db, `users/${folder}/${uid}`))).exists();
+    await update(ref(db, inFolder ? `users/${folder}/${uid}` : `users/${uid}`), values);
   } catch (err) {
     throw new Error(friendlyMessage(err));
   }

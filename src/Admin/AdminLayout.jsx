@@ -13,6 +13,7 @@ const NAV = [
   { to: "/admin/rescue-teams", label: "Rescue Teams", icon: "rescue", sub: "Manage teams and their availability" },
   { to: "/admin/users", label: "Users", icon: "users", sub: "Manage resident and responder accounts" },
   { to: "/admin/reports", label: "Reports & Stats", icon: "stats", sub: "Overall statistics and downloadable reports" },
+  { to: "/admin/outcomes", label: "Response Outcomes", icon: "check", sub: "Record and edit how rescue operations ended" },
   { to: "/admin/audit", label: "Audit", icon: "audit", sub: "Record of important actions and status changes" },
   { to: "/admin/profile", label: "Profile", icon: "profile", hidden: true, sub: "Your account details and password" },
 ];

@@ -5,7 +5,7 @@ import "./Admin/Admin.css";
 import logo from "./assets/disastrack-icon.png";
 import { signOut } from "firebase/auth";
 import { auth } from "./firebase.js";
-import { loadAdminProfile, signInAdmin } from "./Admin/js/accountService.js";
+import { homePathForRole, loadAdminProfile, signInAdmin } from "./Admin/js/accountService.js";
 import AdminLayout from "./Admin/AdminLayout.jsx";
 import Dashboard from "./Admin/Dashboard.jsx";
 import ComingSoon from "./Admin/ComingSoon.jsx";
@@ -21,6 +21,8 @@ import { setAuditActor } from "./Admin/Audit/auditLog.js";
 import Profile from "./Admin/Profile/Profile.jsx";
 import OfficerLayout from "./Officer/OfficerLayout.jsx";
 import OfficerOverview from "./Officer/Overview.jsx";
+import IncidentTrends from "./Officer/IncidentTrends.jsx";
+import ResponseOutcomes from "./Admin/Outcomes/ResponseOutcomes.jsx";
 import LoadingScreen from "./LoadingScreen.jsx";
 
 function UserIcon() {
@@ -200,9 +202,10 @@ export default function App() {
 
   // Throws an Error with a readable message when sign-in fails (the Login form shows it).
   async function handleLogin({ username, password, remember }) {
-    const admin = await signInAdmin(username, password, remember);
-    setUser(admin);
-    navigate("/admin", { replace: true });
+    const account = await signInAdmin(username, password, remember);
+    setUser(account);
+    // Admin goes to /admin, Disaster Management Officer goes to /officer.
+    navigate(homePathForRole(account.role), { replace: true });
   }
 
   async function handleLogout() {
@@ -218,11 +221,18 @@ export default function App() {
 
   if (checking) return <LoadingScreen message="Checking your session…" />;
 
+  // Route guards: each console opens only for its own role.
+  //   no user          -> back to the sign-in page
+  //   user, wrong role -> sent to their own console
+  const isAdmin = user?.role === "Admin";
+  const isOfficer = user?.role === "Disaster Management Officer";
+  const wrongRoleTarget = user ? homePathForRole(user.role) : "/";
+
   return (
     <Routes>
       <Route
         path="/"
-        element={user ? <Navigate to="/admin" replace /> : <Login onLogin={handleLogin} />}
+        element={user ? <Navigate to={homePathForRole(user.role)} replace /> : <Login onLogin={handleLogin} />}
       />
 
       {/* The incident list is held here, above every admin screen, so the dashboard
@@ -231,7 +241,7 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            user ? <AdminLayout user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />
+            isAdmin ? <AdminLayout user={user} onLogout={handleLogout} /> : <Navigate to={wrongRoleTarget} replace />
           }
         >
           <Route index element={<Dashboard />} />
@@ -243,6 +253,7 @@ export default function App() {
           <Route path="rescue-teams" element={<RescueTeams />} />
           <Route path="users" element={<Users />} />
           <Route path="reports" element={<ReportsStats />} />
+          <Route path="outcomes" element={<ResponseOutcomes user={user} />} />
           <Route path="audit" element={<Audit />} />
           <Route path="profile" element={<Profile user={user} onUpdate={handleUpdateUser} />} />
         </Route>
@@ -251,16 +262,17 @@ export default function App() {
         <Route
           path="/officer"
           element={
-            user ? <OfficerLayout user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />
+            isOfficer ? <OfficerLayout user={user} onLogout={handleLogout} /> : <Navigate to={wrongRoleTarget} replace />
           }
         >
           <Route index element={<OfficerOverview />} />
           <Route path="incident-reports" element={<ComingSoon title="Incident Reports" />} />
           <Route path="operations" element={<ComingSoon title="Operations Monitor" />} />
-          <Route path="trends" element={<ComingSoon title="Incident Trends" />} />
-          <Route path="reports" element={<ComingSoon title="Reports & Stats" />} />
+          <Route path="trends" element={<IncidentTrends />} />
+          <Route path="outcomes" element={<ResponseOutcomes readOnly />} />
+          <Route path="reports" element={<ReportsStats />} />
           <Route path="live-map" element={<LiveMap reviewable={false} />} />
-          <Route path="profile" element={<ComingSoon title="Profile" />} />
+          <Route path="profile" element={<Profile user={user} onUpdate={handleUpdateUser} />} />
         </Route>
       </Route>
 
