@@ -35,7 +35,9 @@ function Toast({ toast, onOpen, onClose }) {
  * and pop-ups for new incident reports, new users and new rescue teams.
  * Props: uid = the signed-in admin's uid (each admin has their own "read" marker).
  */
-export default function NotificationBell({ uid }) {
+// base = where the console lives: "/admin" (default) or "/officer".
+// The officer has no Users / Rescue Teams screens, so those open the Live Map instead.
+export default function NotificationBell({ uid, base = "/admin" }) {
   const { items, unread, isUnread, markAllRead, toasts, dismissToast } = useNotifications(uid);
   const [open, setOpen] = useState(false);
   const wrap = useRef(null);
@@ -59,7 +61,9 @@ export default function NotificationBell({ uid }) {
   function openItem(n) {
     setOpen(false);
     dismissToast(n.key || n.id);
-    navigate(n.to);
+    if (base === "/admin") navigate(n.to);
+    else if (n.kind === "incident") navigate(`${base}/incident-reports/${String(n.id).split(":")[1]}`);
+    else navigate(`${base}/live-map`);
   }
 
   return (

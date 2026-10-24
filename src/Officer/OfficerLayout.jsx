@@ -107,7 +107,7 @@ export default function OfficerLayout({ user, onLogout }) {
           </div>
 
           <div className="admin-topbar__actions">
-            <NotificationBell uid={user?.uid} />
+            <NotificationBell uid={user?.uid} base="/officer" />
           </div>
         </header>
 

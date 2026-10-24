@@ -130,7 +130,7 @@
     "notificationReads": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Admin')",
+        ".write": "auth != null && auth.uid === $uid && (root.child('userRoles').child(auth.uid).val() === 'Admin' || root.child('userRoles').child(auth.uid).val() === 'Disaster Management Officer' || root.child('users').child(auth.uid).child('role').val() === 'Admin')",
         ".validate": "newData.hasChildren(['lastReadAt'])",
         "lastReadAt": {
           ".validate": "newData.isString() && newData.val().length <= 40"

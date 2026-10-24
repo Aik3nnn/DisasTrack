@@ -8,7 +8,6 @@ import { auth } from "./firebase.js";
 import { homePathForRole, loadAdminProfile, signInAdmin } from "./Admin/js/accountService.js";
 import AdminLayout from "./Admin/AdminLayout.jsx";
 import Dashboard from "./Admin/Dashboard.jsx";
-import ComingSoon from "./Admin/ComingSoon.jsx";
 import { IncidentsLayout } from "./Admin/IncidentReports/IncidentsContext.jsx";
 import IncidentReports from "./Admin/IncidentReports/IncidentReports.jsx";
 import IncidentDetail from "./Admin/IncidentReports/IncidentDetail.jsx";
@@ -21,6 +20,7 @@ import { setAuditActor } from "./Admin/Audit/auditLog.js";
 import Profile from "./Admin/Profile/Profile.jsx";
 import OfficerLayout from "./Officer/OfficerLayout.jsx";
 import OfficerOverview from "./Officer/Overview.jsx";
+import OperationsMonitor from "./Officer/OperationsMonitor.jsx";
 import IncidentTrends from "./Officer/IncidentTrends.jsx";
 import ResponseOutcomes from "./Admin/Outcomes/ResponseOutcomes.jsx";
 import LoadingScreen from "./LoadingScreen.jsx";
@@ -266,8 +266,11 @@ export default function App() {
           }
         >
           <Route index element={<OfficerOverview />} />
-          <Route path="incident-reports" element={<ComingSoon title="Incident Reports" />} />
-          <Route path="operations" element={<ComingSoon title="Operations Monitor" />} />
+          <Route path="incident-reports">
+            <Route index element={<IncidentReports readOnly basePath="/officer/incident-reports" />} />
+            <Route path=":id" element={<IncidentDetail readOnly basePath="/officer/incident-reports" />} />
+          </Route>
+          <Route path="operations" element={<OperationsMonitor />} />
           <Route path="trends" element={<IncidentTrends />} />
           <Route path="outcomes" element={<ResponseOutcomes readOnly />} />
           <Route path="reports" element={<ReportsStats />} />

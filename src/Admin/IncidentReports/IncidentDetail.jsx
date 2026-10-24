@@ -17,7 +17,7 @@ import { Badge, IconAlert, IconBack, IconCheck, IconImage } from "./incidentShar
 import { useTeams } from "../js/useTeams.js";
 import { setTeamAssignment } from "../js/teamService.js";
 
-const LIST_PATH = "/admin/incident-reports";
+const ADMIN_PATH = "/admin/incident-reports";
 
 // Straight-line distance in km between two points (used to show how far a team is).
 function distanceKm(a, b) {
@@ -29,7 +29,13 @@ function distanceKm(a, b) {
   return 12742 * Math.asin(Math.sqrt(h));
 }
 
-export default function IncidentDetail() {
+/**
+ * readOnly = true is the Disaster Management Officer version: the whole report can be
+ * read, but there are no buttons that change it (verify, priority, dispatch, ...).
+ * basePath is where the list lives ("/officer/incident-reports" for the officer).
+ */
+export default function IncidentDetail({ readOnly = false, basePath = ADMIN_PATH }) {
+  const LIST_PATH = basePath;
   const { id } = useParams();
   const navigate = useNavigate();
   const { incidents, loading, update } = useIncidents();
@@ -39,6 +45,7 @@ export default function IncidentDetail() {
   const [error, setError] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const [viewing, setViewing] = useState(null); // photo shown full-size
 
   const incident = incidents.find((i) => i.id === id);
 
@@ -63,6 +70,9 @@ export default function IncidentDetail() {
   }
 
   const { status } = incident;
+  // Pictures sent by the resident app: a list of "data:image/jpeg;base64,..." strings.
+  // Firebase may hand a list back as an object, so normalise it to an array.
+  const photos = (Array.isArray(incident.photoData) ? incident.photoData : Object.values(incident.photoData || {})).filter(Boolean);
   const isOpen = OPEN_STATUSES.includes(status);
   const canDispatch = DISPATCHABLE_STATUSES.includes(status);
   const teamWorking = ACTIVE_TEAM_STATUSES.includes(status);
@@ -167,10 +177,25 @@ export default function IncidentDetail() {
 
           <section className="ir-card">
             <div className="ir-card__head">
-              <h3 className="ir-card__title">Attached photos ({incident.photos})</h3>
+              <h3 className="ir-card__title">Attached photos ({photos.length || incident.photos})</h3>
             </div>
             <div className="ir-card__body">
-              {incident.photos > 0 ? (
+              {photos.length > 0 ? (
+                <div className="ir-photos">
+                  {photos.map((src, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className="ir-photo ir-photo--img"
+                      onClick={() => setViewing(src)}
+                      aria-label={`View photo ${i + 1} full size`}
+                    >
+                      <img src={src} alt={`Photo ${i + 1} from the reporter`} loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              ) : incident.photos > 0 ? (
+                // Older / sample reports only stored a photo count, not the pictures.
                 <div className="ir-photos">
                   {Array.from({ length: incident.photos }, (_, i) => (
                     <div key={i} className="ir-photo" role="img" aria-label={`Photo ${i + 1} (placeholder)`}>
@@ -183,6 +208,13 @@ export default function IncidentDetail() {
               )}
             </div>
           </section>
+
+          {viewing && (
+            <div className="ir-lightbox" role="dialog" aria-label="Photo" onClick={() => setViewing(null)}>
+              <img src={viewing} alt="Full-size photo from the reporter" />
+              <button type="button" className="ir-lightbox__close" onClick={() => setViewing(null)} aria-label="Close photo">×</button>
+            </div>
+          )}
 
           <section className="ir-card">
             <div className="ir-card__head">
@@ -197,6 +229,28 @@ export default function IncidentDetail() {
 
         {/* right column */}
         <div className="ir-stack">
+          {readOnly ? (
+            <section className="ir-card">
+              <div className="ir-card__head"><h3 className="ir-card__title">Response</h3></div>
+              <div className="ir-section">
+                <dl className="ir-fields ir-fields--single">
+                  <div className="ir-field"><dt>Priority</dt><dd><Badge label={incident.priority} /></dd></div>
+                  <div className="ir-field"><dt>Status</dt><dd><Badge label={status} /></dd></div>
+                  <div className="ir-field">
+                    <dt>Rescue team</dt>
+                    <dd>
+                      {incident.team
+                        ? assignedTeam
+                          ? `${assignedTeam.name} (${assignedTeam.type})`
+                          : `Team ${incident.team}`
+                        : "No team assigned"}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="ir-hint-text">View only. Verifying, dispatching and status changes are done by the admin.</p>
+              </div>
+            </section>
+          ) : (
           <section className="ir-card">
             <div className="ir-card__head"><h3 className="ir-card__title">Actions</h3></div>
 
@@ -377,6 +431,7 @@ export default function IncidentDetail() {
               )}
             </div>
           </section>
+          )}
 
           {status === "Duplicate" && incident.duplicateOf && (
             <section className="ir-dup" aria-label="Duplicate report">
@@ -424,12 +479,16 @@ export default function IncidentDetail() {
                 <Link className="ir-btn ir-btn--sm" to={`${LIST_PATH}/${incident.duplicateOf}`}>
                   Compare reports
                 </Link>
-                <button type="button" className="ir-btn ir-btn--sm ir-btn--primary" onClick={markDuplicate}>
-                  Mark as duplicate
-                </button>
-                <button type="button" className="ir-btn ir-btn--sm" onClick={notDuplicate}>
-                  Not a duplicate
-                </button>
+                {!readOnly && (
+                  <>
+                    <button type="button" className="ir-btn ir-btn--sm ir-btn--primary" onClick={markDuplicate}>
+                      Mark as duplicate
+                    </button>
+                    <button type="button" className="ir-btn ir-btn--sm" onClick={notDuplicate}>
+                      Not a duplicate
+                    </button>
+                  </>
+                )}
               </div>
             </section>
           )}

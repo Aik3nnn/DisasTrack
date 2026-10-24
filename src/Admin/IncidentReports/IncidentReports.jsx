@@ -12,7 +12,7 @@ import {
   IconSearch,
 } from "./incidentShared.jsx";
 
-const LIST_PATH = "/admin/incident-reports";
+const ADMIN_PATH = "/admin/incident-reports";
 const PAGE_SIZE = 8;
 const PRIORITY_RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 };
 
@@ -52,7 +52,13 @@ function exportCsv(list) {
   URL.revokeObjectURL(url);
 }
 
-export default function IncidentReports() {
+/**
+ * readOnly = true is the Disaster Management Officer version: same list, filters and
+ * details, but no selecting / verifying / loading samples. basePath is where the
+ * detail pages live ("/officer/incident-reports" for the officer).
+ */
+export default function IncidentReports({ readOnly = false, basePath = ADMIN_PATH }) {
+  const LIST_PATH = basePath;
   const { incidents, loading, error, update, loadSamples } = useIncidents();
   const [seedError, setSeedError] = useState("");
   const [seeding, setSeeding] = useState(false);
@@ -212,7 +218,7 @@ export default function IncidentReports() {
         </div>
       </div>
 
-      {selected.length > 0 && (
+      {!readOnly && selected.length > 0 && (
         <div className="ir-bulk" role="status">
           <strong>{selected.length} selected</strong>
           <button
@@ -235,6 +241,7 @@ export default function IncidentReports() {
           <table className="ir-table">
             <thead>
               <tr>
+                {!readOnly && (
                 <th scope="col" className="ir-table__check">
                   <input
                     type="checkbox"
@@ -244,6 +251,7 @@ export default function IncidentReports() {
                     aria-label="Select all reports on this page"
                   />
                 </th>
+                )}
                 <th scope="col">Report ID</th>
                 <th scope="col">Incident</th>
                 <th scope="col">Location</th>
@@ -261,6 +269,7 @@ export default function IncidentReports() {
                 return (
                   <Fragment key={r.id}>
                     <tr>
+                      {!readOnly && (
                       <td className="ir-table__check">
                         <input
                           type="checkbox"
@@ -270,6 +279,7 @@ export default function IncidentReports() {
                           aria-label={`Select ${r.id}`}
                         />
                       </td>
+                      )}
                       <td><Link className="ir-id" to={`${LIST_PATH}/${r.id}`}>{r.id}</Link></td>
                       <td>
                         <span className="ir-strong">{r.type}</span>
@@ -298,14 +308,14 @@ export default function IncidentReports() {
                       <td className="ir-muted">{ago(r.createdAt)}</td>
                       <td className="ir-table__action">
                         <button type="button" className="ir-btn ir-btn--sm ir-btn--link" onClick={() => navigate(`${LIST_PATH}/${r.id}`)}>
-                          Review
+                          {readOnly ? "View" : "Review"}
                         </button>
                       </td>
                     </tr>
                     {open &&
                       dups.map((d) => (
                         <tr key={d.id} className="ir-subrow">
-                          <td />
+                          {!readOnly && <td />}
                           <td className="ir-subrow__indent"><Link className="ir-id" to={`${LIST_PATH}/${d.id}`}>{d.id}</Link></td>
                           <td>Duplicate of {r.id}</td>
                           <td>{d.location}</td>
@@ -331,10 +341,15 @@ export default function IncidentReports() {
           {!loading && incidents.length === 0 && (
             <div className="ir-empty">
               <h3>No incident reports yet</h3>
-              <p>Reports from residents appear here as soon as they are saved in Firebase (/incidents). You can also load the sample reports to try the screens.</p>
-              <button type="button" className="ir-btn ir-btn--sm ir-btn--primary" onClick={addSamples} disabled={seeding}>
-                {seeding ? "Saving…" : "Load sample incidents"}
-              </button>
+              <p>
+                Reports from residents appear here as soon as they are saved in Firebase (/incidents).
+                {!readOnly && " You can also load the sample reports to try the screens."}
+              </p>
+              {!readOnly && (
+                <button type="button" className="ir-btn ir-btn--sm ir-btn--primary" onClick={addSamples} disabled={seeding}>
+                  {seeding ? "Saving…" : "Load sample incidents"}
+                </button>
+              )}
             </div>
           )}
 
