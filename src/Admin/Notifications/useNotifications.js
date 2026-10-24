@@ -18,13 +18,35 @@ const BATCH_TITLE = {
   team: (n) => `${n} new rescue teams created`,
 };
 
+// Notifications the person has clicked are remembered on this device, per account,
+// so they stay "read" after a refresh. (The "Mark all as read" marker is saved in Firebase.)
+const READ_KEY = (uid) => `disastrack-read-notifications:${uid}`;
+const MAX_REMEMBERED = 300;
+
+function loadReadIds(uid) {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(READ_KEY(uid)) || "[]"));
+  } catch {
+    return new Set(); // storage blocked or unreadable: start empty
+  }
+}
+
+function saveReadIds(uid, ids) {
+  try {
+    localStorage.setItem(READ_KEY(uid), JSON.stringify([...ids].slice(-MAX_REMEMBERED)));
+  } catch {
+    // Storage full or blocked: the item still shows as read until the page is refreshed.
+  }
+}
+
 /**
  * Live notifications for the signed-in admin. Must be used inside <IncidentsLayout>.
  *
- *   const { items, unread, isUnread, markAllRead, toasts, dismissToast } = useNotifications(uid);
+ *   const { items, unread, isUnread, markRead, markAllRead, toasts, dismissToast } = useNotifications(uid);
  *
  *   items    = the latest notifications (newest first)
  *   unread   = how many of them this admin has not read yet
+ *   markRead(id) = marks one notification as read (called when it is clicked)
  *   toasts   = small pop-ups for things that arrive while the page is open
  */
 export function useNotifications(uid) {
@@ -35,11 +57,17 @@ export function useNotifications(uid) {
   const [lastRead, setLastRead] = useState(null); // ms, null until loaded
   const [liveIds, setLiveIds] = useState(() => new Set()); // arrived while this page was open
   const [toasts, setToasts] = useState([]);
+  const [readIds, setReadIds] = useState(() => loadReadIds(uid)); // ids the person clicked
   const seen = useRef(null); // ids already known; null until the first full load
 
   useEffect(() => {
     if (!uid) return undefined;
     return watchLastRead(uid, setLastRead);
+  }, [uid]);
+
+  // A different person signed in: load their own list of read notifications.
+  useEffect(() => {
+    setReadIds(loadReadIds(uid));
   }, [uid]);
 
   const all = useMemo(() => buildNotifications({ incidents, accounts, teams }), [incidents, accounts, teams]);
@@ -78,10 +106,24 @@ export function useNotifications(uid) {
   }, [all, loaded]);
 
   const isUnread = useCallback(
-    (n) => lastRead !== null && (liveIds.has(n.id) || toMs(n.at) > lastRead),
-    [lastRead, liveIds]
+    (n) => lastRead !== null && !readIds.has(n.id) && (liveIds.has(n.id) || toMs(n.at) > lastRead),
+    [lastRead, liveIds, readIds]
   );
   const unread = useMemo(() => items.filter(isUnread).length, [items, isUnread]);
+
+  // Clicking one notification marks just that one as read.
+  const markRead = useCallback(
+    (id) => {
+      if (!id) return;
+      setReadIds((prev) => {
+        if (prev.has(id)) return prev;
+        const next = new Set(prev).add(id);
+        saveReadIds(uid, next);
+        return next;
+      });
+    },
+    [uid]
+  );
 
   const markAllRead = useCallback(() => {
     const now = new Date().toISOString();
@@ -94,5 +136,5 @@ export function useNotifications(uid) {
     setToasts((prev) => prev.filter((t) => t.key !== key));
   }, []);
 
-  return { items, unread, isUnread, markAllRead, toasts, dismissToast };
+  return { items, unread, isUnread, markRead, markAllRead, toasts, dismissToast };
 }

@@ -38,7 +38,7 @@ function Toast({ toast, onOpen, onClose }) {
 // base = where the console lives: "/admin" (default) or "/officer".
 // The officer has no Users / Rescue Teams screens, so those open the Live Map instead.
 export default function NotificationBell({ uid, base = "/admin" }) {
-  const { items, unread, isUnread, markAllRead, toasts, dismissToast } = useNotifications(uid);
+  const { items, unread, isUnread, markRead, markAllRead, toasts, dismissToast } = useNotifications(uid);
   const [open, setOpen] = useState(false);
   const wrap = useRef(null);
   const navigate = useNavigate();
@@ -59,6 +59,7 @@ export default function NotificationBell({ uid, base = "/admin" }) {
   }, [open]);
 
   function openItem(n) {
+    markRead(n.id); // clicking a notification marks it as read (pop-ups for several items have no id)
     setOpen(false);
     dismissToast(n.key || n.id);
     if (base === "/admin") navigate(n.to);
