@@ -16,6 +16,7 @@ const BATCH_TITLE = {
   incident: (n) => `${n} new incident reports`,
   user: (n) => `${n} new users created`,
   team: (n) => `${n} new rescue teams created`,
+  suspended: (n) => `${n} users suspended`,
 };
 
 // Notifications the person has clicked are remembered on this device, per account,

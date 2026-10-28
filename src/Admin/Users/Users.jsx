@@ -63,7 +63,11 @@ export default function Users() {
     setActionError("");
     try {
       const newStatus = u.status === "Active" ? "Suspended" : "Active";
-      await updateAccount(u, { status: newStatus });
+      await updateAccount(u, {
+        status: newStatus,
+        // Lets the console (and the resident app) tell when the suspension happened.
+        suspendedAt: newStatus === "Suspended" ? new Date().toISOString() : null,
+      });
       logAction({
         category: "Account",
         action: newStatus === "Suspended" ? "User suspended" : "User reactivated",

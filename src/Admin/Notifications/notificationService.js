@@ -19,10 +19,11 @@ import { db } from "../../firebase.js";
 
 export const MAX_NOTIFICATIONS = 30; // how many the bell lists
 
-export const KIND_ICON = { incident: "reports", user: "users", team: "rescue" };
+export const KIND_ICON = { incident: "reports", user: "users", team: "rescue", suspended: "alert" };
 export const KIND_LINK = {
   incident: "/admin/incident-reports",
   user: "/admin/users",
+  suspended: "/admin/users",
   team: "/admin/rescue-teams",
 };
 
@@ -57,6 +58,20 @@ export function buildNotifications({ incidents, accounts, teams }) {
       meta: a.username ? `@${a.username}` : "",
       at: a.createdAt,
       to: KIND_LINK.user,
+    });
+  });
+
+  // An account the admin suspended (shows once per suspension; reactivating removes it).
+  accounts.forEach((a) => {
+    if (a.status !== "Suspended" || !a.suspendedAt) return;
+    list.push({
+      id: `suspended:${a.id}:${a.suspendedAt}`,
+      kind: "suspended",
+      title: "User suspended",
+      text: `${a.name || a.username || "An account"}${a.role ? ` (${a.role})` : ""} has been suspended`,
+      meta: a.username ? `@${a.username}` : "",
+      at: a.suspendedAt,
+      to: KIND_LINK.suspended,
     });
   });
 

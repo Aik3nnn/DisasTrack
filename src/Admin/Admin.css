@@ -2228,6 +2228,9 @@
   color: var(--brandy);
 }
 
+.nt-item--suspended .nt-icon,
+.nt-toast--suspended .nt-icon { background: #fbe9e4; color: #b3261e; }
+.nt-toast--suspended { border-left-color: #b3261e; }
 .nt-item--user .nt-icon,
 .nt-toast--user .nt-icon { background: #e8ecf0; color: var(--blue-slate); }
 .nt-item--team .nt-icon,
